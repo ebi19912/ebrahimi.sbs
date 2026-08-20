@@ -428,16 +428,16 @@ export default function App() {
           </FadeInUp>
 
           {/* PROJECT CARDS GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 min-w-0">
             {completed.concat(ongoing).map((proj, idx) => (
-              <FadeInUp key={idx} delay={idx * 0.1}>
-                <div className="h-full bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs hover:shadow-xl hover:border-purple-200 transition-all duration-300 flex flex-col justify-between group overflow-hidden">
-                  <div>
+              <FadeInUp key={idx} delay={idx * 0.1} className="min-w-0">
+                <div className="h-full w-full min-w-0 max-w-full bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-8 shadow-xs hover:shadow-xl hover:border-purple-200 transition-all duration-300 flex flex-col justify-between group overflow-hidden">
+                  <div className="min-w-0">
                     <div className="flex items-start justify-between gap-4 mb-4">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-lg sm:text-xl group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300 flex-shrink-0">
                         <BiCodeBlock />
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         {proj.status === 'ongoing' ? (
                           <span className="text-[11px] sm:text-xs font-semibold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
                             In Progress
@@ -450,10 +450,10 @@ export default function App() {
                       </div>
                     </div>
 
-                    <h3 className="text-lg sm:text-xl font-bold text-slate-900 group-hover:text-purple-600 transition-colors break-words">
+                    <h3 className="text-base sm:text-xl font-bold text-slate-900 group-hover:text-purple-600 transition-colors [overflow-wrap:anywhere] break-words">
                       {proj.title}
                     </h3>
-                    <p className="text-xs sm:text-sm text-slate-600 mt-2.5 sm:mt-3 leading-relaxed break-words">
+                    <p className="text-xs sm:text-sm text-slate-600 mt-2.5 sm:mt-3 leading-relaxed [overflow-wrap:anywhere] break-words">
                       {proj.short_description}
                     </p>
 

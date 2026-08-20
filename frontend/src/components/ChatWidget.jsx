@@ -64,13 +64,13 @@ export const ChatWidget = () => {
     <>
       {/* Floating Toggle Button */}
       {!isOpen && (
-        <div className="fixed bottom-5 right-5 sm:bottom-8 sm:right-8 z-50 font-sans">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 font-sans">
           <button 
             onClick={() => setIsOpen(true)}
-            className="bg-gradient-to-tr from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200"
+            className="bg-gradient-to-tr from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white w-13 h-13 sm:w-16 sm:h-16 rounded-full flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-all duration-200"
             aria-label="Open AI Assistant"
           >
-            <FiMessageSquare className="text-2xl sm:text-3xl" />
+            <FiMessageSquare className="text-xl sm:text-2xl" />
           </button>
         </div>
       )}
