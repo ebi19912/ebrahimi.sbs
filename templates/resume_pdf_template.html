@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resume</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm; /* حاشیه استاندارد */
+        }
+        body {
+            font-family: Helvetica, sans-serif; /* فونت استاندارد انگلیسی */
+            color: #333;
+            line-height: 1.5;
+            font-size: 11pt;
+        }
+        
+        /* Header Section */
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #333;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24pt;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .contact-info {
+            font-size: 10pt;
+            color: #555;
+            margin-top: 5px;
+        }
+
+        /* Sections */
+        h3 {
+            background-color: #f4f4f4;
+            padding: 5px 10px;
+            border-left: 5px solid #2c3e50;
+            color: #2c3e50;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            font-size: 12pt;
+        }
+
+        /* Items (Work, Edu, etc) */
+        .item {
+            margin-bottom: 15px;
+            page-break-inside: avoid; /* جلوگیری از شکستن آیتم بین صفحات */
+        }
+        .item-header {
+            width: 100%;
+            margin-bottom: 2px;
+        }
+        .title {
+            font-weight: bold;
+            font-size: 12pt;
+            color: #000;
+        }
+        .date {
+            float: right;
+            font-size: 10pt;
+            color: #666;
+            font-weight: bold;
+        }
+        .org {
+            font-style: italic;
+            color: #444;
+            font-size: 11pt;
+            display: block;
+        }
+        .description {
+            margin-top: 5px;
+            text-align: justify;
+            font-size: 10.5pt;
+        }
+        
+        /* Skills & Lists */
+        .skills-container {
+            margin-top: 5px;
+        }
+        .skill-badge {
+            display: inline-block;
+            background-color: #eee;
+            padding: 2px 8px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 9pt;
+            border: 1px solid #ddd;
+        }
+        
+        /* Projects Specific */
+        .project-status {
+            font-size: 8pt;
+            padding: 2px 4px;
+            border-radius: 3px;
+            vertical-align: middle;
+            margin-left: 5px;
+        }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-ongoing { background: #fff3cd; color: #856404; }
+
+        a { color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>{{ profile.full_name }}</h1>
+        <div class="contact-info">
+            {% if profile.email %}{{ profile.email }} | {% endif %}
+            {% if profile.mobile %}{{ profile.mobile }} | {% endif %}
+            {{ request.host_url.rstrip('/') }}
+            {% if profile.linkedin %}<br>LinkedIn: {{ profile.linkedin }}{% endif %}
+            {% if profile.github %} | GitHub: {{ profile.github }}{% endif %}
+            {% if profile.address %}<br>{{ profile.address }}{% endif %}
+        </div>
+    </div>
+
+    {% if profile.about_me %}
+    <section>
+        <h3>Professional Summary</h3>
+        <div class="description">{{ profile.about_me | safe }}</div>
+    </section>
+    {% endif %}
+
+    {% if skills %}
+    <section>
+        <h3>Skills</h3>
+        <div class="skills-container">
+            {% for skill in skills %}
+                <span class="skill-badge">{{ skill.name }} ({{ skill.level }}%)</span>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <section>
+        <h3>Work Experience</h3>
+        {% for item in items if item.category == 'work' %}
+        <div class="item">
+            <div class="item-header">
+                <span class="title">{{ item.title }}</span>
+                <span class="date">{{ item.duration }}</span>
+            </div>
+            <span class="org">{{ item.organization }}</span>
+            <div class="description">{{ item.description | safe }}</div>
+        </div>
+        {% endfor %}
+    </section>
+
+    <section>
+        <h3>Key Projects</h3>
+        {% for p in projects %}
+        <div class="item">
+            <div class="item-header">
+                <span class="title">{{ p.title }}</span>
+                <span class="project-status {{ 'status-completed' if p.status == 'completed' else 'status-ongoing' }}">
+                    {{ 'Completed' if p.status == 'completed' else 'Ongoing' }}
+                </span>
+            </div>
+            <div class="description">
+                <strong>{{ p.short_description }}</strong>
+                <br>
+                {{ p.full_content | safe }}
+                {% if p.github_link %}
+                <br>
+                <a href="{{ p.github_link }}">GitHub Repository</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+
+    <section>
+        <h3>Education</h3>
+        {% for item in items if item.category == 'education' %}
+        <div class="item">
+            <div class="item-header">
+                <span class="title">{{ item.title }}</span>
+                <span class="date">{{ item.duration }}</span>
+            </div>
+            <span class="org">{{ item.organization }}</span>
+            <div class="description">{{ item.description | safe }}</div>
+        </div>
+        {% endfor %}
+    </section>
+
+    {% set honors = [] %}
+    {% set papers = [] %}
+    {% for item in items %}
+        {% if item.category == 'honor' %}{% set _ = honors.append(item) %}{% endif %}
+        {% if item.category == 'paper' %}{% set _ = papers.append(item) %}{% endif %}
+    {% endfor %}
+
+    {% if honors %}
+    <section>
+        <h3>Honors & Awards</h3>
+        {% for item in honors %}
+        <div class="item">
+            <strong>{{ item.title }}</strong> - {{ item.organization }}
+            <span class="date">{{ item.duration }}</span>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if papers %}
+    <section>
+        <h3>Publications</h3>
+        {% for item in papers %}
+        <div class="item">
+            <strong>{{ item.title }}</strong>
+            <div class="description">{{ item.description | safe }}</div>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+
+    {% if profile.hobbies %}
+    <section>
+        <h3>Interests & Hobbies</h3>
+        <div class="description">{{ profile.hobbies }}</div>
+    </section>
+    {% endif %}
+
+</body>
+</html>

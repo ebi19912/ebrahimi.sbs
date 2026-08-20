@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La Collezione | Marmi Nebrodi</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .page-header {
+      padding: 12rem 0 6rem;
+      background-color: var(--color-surface-alt);
+      text-align: center;
+    }
+    
+    .collection-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4rem;
+      padding: 6rem 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    
+    @media(min-width: 992px) {
+      .collection-item {
+        flex-direction: row;
+      }
+      .collection-item:nth-child(even) {
+        flex-direction: row-reverse;
+      }
+    }
+
+    .item-image {
+      flex: 1;
+      width: 100%;
+    }
+
+    .item-image img {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1/1;
+      object-fit: cover;
+    }
+
+    .item-content {
+      flex: 1;
+      padding: 0 2rem;
+    }
+
+    .item-content h2 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .item-content p {
+      color: var(--color-text-secondary);
+      margin-bottom: 2rem;
+      max-width: 500px;
+    }
+
+    .specs-list {
+      margin-bottom: 2rem;
+    }
+
+    .specs-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--color-border);
+      font-size: 0.8rem;
+    }
+
+    .specs-list li span:first-child {
+      color: var(--color-text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="Home.html" class="brand-logo">
+        <span class="title">Marmi Nebrodi</span>
+        <span class="subtitle">Sicilia 1980</span>
+      </a>
+      <nav class="main-nav">
+        <a href="collection.html" class="active" data-i18n="nav.collection">Collezione</a>
+        <a href="quarry.html" data-i18n="nav.quarry">Cava</a>
+        <a href="contact.html" data-i18n="nav.contact">Contatti</a>
+      </nav>
+      <div class="header-actions">
+        <div class="lang-switch">
+          <button class="active" onclick="changeLang('it')" id="lang-it">IT</button>
+          <span>/</span>
+          <button onclick="changeLang('en')" id="lang-en">EN</button>
+        </div>
+        <a href="contact.html" class="btn-primary" data-i18n="nav.quote">Richiedi Campioni</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-header fade-in">
+    <div class="container">
+      <span class="section-label" data-i18n="page.label">La Materia Prima</span>
+      <h1 class="section-title" data-i18n="page.title">Collezione</h1>
+    </div>
+  </section>
+
+  <section class="container">
+    
+    <!-- ROSSO MAZZUSA -->
+    <div id="rosso" class="collection-item fade-in">
+      <div class="item-image">
+        <img src="assets/rosso_mazzusa_texture_1787066876607.jpg" alt="Rosso Mazzusa">
+      </div>
+      <div class="item-content">
+        <h2>Rosso Mazzusa</h2>
+        <p data-i18n="item1.desc">Marmo calcareo nodulare siciliano unico per intensità cromatica, sfumature bordeaux e spettacolari venature bianche di calcite. Estratto in esclusiva dalla nostra cava.</p>
+        <ul class="specs-list">
+          <li><span data-i18n="spec.origin">Origine</span> <span>San Marco d'Alunzio</span></li>
+          <li><span data-i18n="spec.type">Tipologia</span> <span data-i18n="spec.type1">Marmo Calcareo</span></li>
+          <li><span data-i18n="spec.finishes">Finiture</span> <span data-i18n="spec.finishes1">Lucido, Levigato, Spazzolato</span></li>
+        </ul>
+        <a href="contact.html" class="btn-outline" data-i18n="btn.request">Richiedi Info</a>
+      </div>
+    </div>
+
+    <!-- PIETRA LAVICA -->
+    <div id="lavica" class="collection-item fade-in">
+      <div class="item-image">
+        <img src="assets/pietra_lavica_texture_1787066957487.jpg" alt="Pietra Lavica">
+      </div>
+      <div class="item-content">
+        <h2>Pietra Lavica dell'Etna</h2>
+        <p data-i18n="item2.desc">Roccia effusiva basaltica di straordinaria compattezza. Inattaccabile dal gelo, dal calore e dall'usura. Perfetta per interni ed esterni dal sapore minimalista.</p>
+        <ul class="specs-list">
+          <li><span data-i18n="spec.origin">Origine</span> <span>Vulcano Etna</span></li>
+          <li><span data-i18n="spec.type">Tipologia</span> <span data-i18n="spec.type2">Basalto Volcanico</span></li>
+          <li><span data-i18n="spec.finishes">Finiture</span> <span data-i18n="spec.finishes2">Levigato, Bocciardato, Fiammato</span></li>
+        </ul>
+        <a href="contact.html" class="btn-outline" data-i18n="btn.request">Richiedi Info</a>
+      </div>
+    </div>
+
+    <!-- PIETRA TAORMINA -->
+    <div id="taormina" class="collection-item fade-in">
+      <div class="item-image">
+        <img src="assets/pietra_taormina_texture_1787067000246.jpg" alt="Pietra Taormina">
+      </div>
+      <div class="item-content">
+        <h2>Pietra Taormina</h2>
+        <p data-i18n="item3.desc">Calcare ornamentale dalle sfumature morbide e calde, protagonista dell'architettura barocca e delle residenze mediterranee di lusso. Una carezza visiva.</p>
+        <ul class="specs-list">
+          <li><span data-i18n="spec.origin">Origine</span> <span>Sicilia Orientale</span></li>
+          <li><span data-i18n="spec.type">Tipologia</span> <span data-i18n="spec.type3">Pietra Calcarea</span></li>
+          <li><span data-i18n="spec.finishes">Finiture</span> <span data-i18n="spec.finishes3">Sabbiato, Anticato, Seta</span></li>
+        </ul>
+        <a href="contact.html" class="btn-outline" data-i18n="btn.request">Richiedi Info</a>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="title">Marmi Nebrodi</div>
+          <p>San Marco d'Alunzio • Sicilia</p>
+        </div>
+        <div class="footer-links">
+          <a href="collection.html">Collezione</a>
+          <a href="quarry.html">La Cava</a>
+          <a href="contact.html">Contatti</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; 2026 Marmi Nebrodi. Minimalist Edition.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const i18n = {
+      it: {
+        "nav.collection": "Collezione",
+        "nav.quarry": "Cava",
+        "nav.contact": "Contatti",
+        "nav.quote": "Richiedi Campioni",
+        "page.label": "La Materia Prima",
+        "page.title": "Collezione",
+        "item1.desc": "Marmo calcareo nodulare siciliano unico per intensità cromatica, sfumature bordeaux e spettacolari venature bianche di calcite. Estratto in esclusiva dalla nostra cava.",
+        "item2.desc": "Roccia effusiva basaltica di straordinaria compattezza. Inattaccabile dal gelo, dal calore e dall'usura. Perfetta per interni ed esterni dal sapore minimalista.",
+        "item3.desc": "Calcare ornamentale dalle sfumature morbide e calde, protagonista dell'architettura barocca e delle residenze mediterranee di lusso. Una carezza visiva.",
+        "spec.origin": "Origine",
+        "spec.type": "Tipologia",
+        "spec.finishes": "Finiture",
+        "spec.type1": "Marmo Calcareo",
+        "spec.finishes1": "Lucido, Levigato, Spazzolato",
+        "spec.type2": "Basalto Volcanico",
+        "spec.finishes2": "Levigato, Bocciardato, Fiammato",
+        "spec.type3": "Pietra Calcarea",
+        "spec.finishes3": "Sabbiato, Anticato, Seta",
+        "btn.request": "Richiedi Info"
+      },
+      en: {
+        "nav.collection": "Collection",
+        "nav.quarry": "Quarry",
+        "nav.contact": "Contact",
+        "nav.quote": "Request Samples",
+        "page.label": "Raw Material",
+        "page.title": "Collection",
+        "item1.desc": "Unique Sicilian nodular calcareous marble known for its chromatic intensity, burgundy nuances and spectacular white calcite veins. Extracted exclusively from our quarry.",
+        "item2.desc": "Basaltic effusive rock of extraordinary compactness. Unassailable by frost, heat and wear. Perfect for minimalist interior and exterior designs.",
+        "item3.desc": "Ornamental limestone with soft and warm nuances, the protagonist of baroque architecture and luxury Mediterranean residences. A visual caress.",
+        "spec.origin": "Origin",
+        "spec.type": "Type",
+        "spec.finishes": "Finishes",
+        "spec.type1": "Calcareous Marble",
+        "spec.finishes1": "Polished, Honed, Brushed",
+        "spec.type2": "Volcanic Basalt",
+        "spec.finishes2": "Honed, Bush-hammered, Flamed",
+        "spec.type3": "Limestone",
+        "spec.finishes3": "Sandblasted, Antiqued, Silk",
+        "btn.request": "Request Info"
+      }
+    };
+
+    function changeLang(lang) {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang] && i18n[lang][key]) el.innerText = i18n[lang][key];
+      });
+
+      document.getElementById('lang-it').classList.toggle('active', lang === 'it');
+      document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+    }
+  </script>
+</body>
+</html>

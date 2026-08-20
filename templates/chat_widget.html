@@ -1,0 +1,447 @@
+<style>
+    /* Reset & Base Variables for Chat Widget */
+    :root {
+        --cw-primary: #0d6efd;
+        --cw-primary-hover: #0b5ed7;
+        --cw-light: #f8f9fa;
+        --cw-border: rgba(0,0,0,0.1);
+        --cw-white: #ffffff;
+        --cw-dark: #212529;
+        --cw-gray: #adb5bd;
+        --cw-text-muted: #6c757d;
+        --cw-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    #cw-container * {
+        box-sizing: border-box;
+        font-family: var(--cw-font);
+    }
+
+    /* Toggle Button */
+    #cw-toggle-btn {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        z-index: 2147483647;
+        background-color: var(--cw-primary);
+        color: var(--cw-white);
+        border: none;
+        border-radius: 50%;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s;
+        padding: 0;
+    }
+    
+    #cw-toggle-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+
+    #cw-toggle-btn svg {
+        width: 28px;
+        height: 28px;
+        fill: currentColor;
+    }
+
+    .cw-hidden-btn {
+        opacity: 0 !important;
+        transform: scale(0) !important;
+        pointer-events: none !important;
+    }
+
+    /* Chat Window */
+    #cw-window {
+        position: fixed;
+        bottom: 100px;
+        right: 30px;
+        width: 380px;
+        height: 500px;
+        max-height: 70vh;
+        z-index: 2147483646;
+        display: none;
+        flex-direction: column;
+        border-radius: 16px;
+        border: 1px solid var(--cw-border);
+        background-color: var(--cw-white);
+        box-shadow: 0 5px 25px rgba(0,0,0,0.15);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        transform-origin: bottom right;
+        opacity: 0;
+        transform: scale(0.9);
+        overflow: hidden;
+    }
+
+    @media (max-width: 576px) {
+        #cw-window {
+            width: 92% !important;
+            right: 4% !important;
+            bottom: 20px !important;
+            height: 80vh !important;
+            max-height: 80vh !important;
+            border-radius: 12px;
+            z-index: 2147483647;
+        }
+        #cw-toggle-btn {
+            bottom: 20px;
+            right: 20px;
+        }
+    }
+
+    /* Header */
+    .cw-header {
+        background-color: var(--cw-primary);
+        color: var(--cw-white);
+        padding: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .cw-header-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .cw-bot-icon {
+        background-color: var(--cw-white);
+        color: var(--cw-primary);
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .cw-bot-icon svg {
+        width: 18px;
+        height: 18px;
+        fill: currentColor;
+    }
+
+    .cw-header-title {
+        font-weight: bold;
+        font-size: 0.95rem;
+        line-height: 1;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .cw-header-subtitle {
+        font-size: 0.7rem;
+        opacity: 0.8;
+    }
+
+    .cw-close-btn {
+        background: none;
+        border: none;
+        color: var(--cw-white);
+        opacity: 0.8;
+        cursor: pointer;
+        padding: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .cw-close-btn:hover { opacity: 1; }
+    .cw-close-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+    /* Messages Area */
+    .cw-messages {
+        flex-grow: 1;
+        padding: 15px;
+        background-color: var(--cw-light);
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .cw-msg-wrapper {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .cw-msg {
+        max-width: 85%;
+        padding: 12px 15px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        line-height: 1.4;
+        word-wrap: break-word;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .cw-msg-bot {
+        align-self: flex-start;
+        background-color: var(--cw-white);
+        color: var(--cw-dark);
+        border: 1px solid var(--cw-border);
+        border-bottom-left-radius: 4px;
+    }
+
+    .cw-msg-user {
+        align-self: flex-end;
+        background-color: var(--cw-primary);
+        color: var(--cw-white);
+        border-bottom-right-radius: 4px;
+    }
+
+    .cw-msg-sender {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: bold;
+        color: var(--cw-primary);
+        margin-bottom: 4px;
+    }
+    
+    .cw-msg-user .cw-msg-sender { display: none; }
+
+    /* Footer & Input */
+    .cw-footer {
+        padding: 10px 15px;
+        background-color: var(--cw-white);
+        border-top: 1px solid var(--cw-border);
+    }
+
+    .cw-form {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .cw-input {
+        flex-grow: 1;
+        border: none;
+        background-color: var(--cw-light);
+        padding: 10px 15px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        outline: none;
+    }
+
+    .cw-send-btn {
+        background-color: var(--cw-primary);
+        color: var(--cw-white);
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        padding: 0;
+        padding-left: 3px;
+    }
+    .cw-send-btn:hover { background-color: var(--cw-primary-hover); }
+    .cw-send-btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+    /* Typing Animation */
+    .cw-typing span {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background-color: var(--cw-gray);
+        border-radius: 50%;
+        margin-right: 3px;
+        animation: cw-typing 1s infinite;
+    }
+    .cw-typing span:nth-child(2) { animation-delay: 0.2s; }
+    .cw-typing span:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes cw-typing {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+    }
+</style>
+
+<div id="cw-container">
+    <button id="cw-toggle-btn" onclick="cwToggleChat()" aria-label="Open Chat">
+        <svg viewBox="0 0 16 16"><path d="M16 8c0 3.866-3.582 7-8 7a9.06 9.06 0 0 1-2.347-.306c-.584.296-1.925.864-4.181 1.234-.2.032-.352-.176-.273-.362.354-.836.674-1.95.77-2.966C.744 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7zM5 8a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2z"/></svg>
+    </button>
+
+    <div id="cw-window">
+        <div class="cw-header">
+            <div class="cw-header-left">
+                <div class="cw-bot-icon">
+                    <svg viewBox="0 0 16 16"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.889a28.04 28.04 0 0 1 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.933.933 0 0 1-.765.935c-.845.147-2.34.346-4.235.346-1.895 0-3.39-.2-4.235-.346A.933.933 0 0 1 3 9.219V8.062Zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a24.767 24.767 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25.286 25.286 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135Z"/><path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2V1.866ZM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5Z"/></svg>
+                </div>
+                <div>
+                    <span id="cw-header-title" class="cw-header-title">AI Assistant</span>
+                    <span id="cw-header-subtitle" class="cw-header-subtitle">Online | RAG Enabled</span>
+                </div>
+            </div>
+            <button class="cw-close-btn" onclick="cwToggleChat()" aria-label="Close">
+                <svg viewBox="0 0 16 16"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/></svg>
+            </button>
+        </div>
+
+        <div id="cw-messages" class="cw-messages">
+            <div class="cw-msg-wrapper">
+                <div class="cw-msg cw-msg-bot">
+                    <span class="cw-msg-sender">Assistant</span>
+                    <span id="cw-initial-msg">Hello! I have analyzed Rouhalah's resume. Ask me anything about his skills or projects!</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="cw-footer">
+            <form id="cw-form" class="cw-form" onsubmit="cwSendMessage(event)">
+                <input type="text" id="cw-input" class="cw-input" placeholder="Type a question..." required>
+                <button type="submit" class="cw-send-btn" aria-label="Send">
+                    <svg viewBox="0 0 16 16"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083l6-15Zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471-.47 1.178Z"/></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    const cwWindow = document.getElementById('cw-window');
+    const cwBtn = document.getElementById('cw-toggle-btn');
+    const cwMessages = document.getElementById('cw-messages');
+    let cwChatHistory = [];
+
+    // Configure marked to open links in new tab
+    if (typeof marked !== 'undefined') {
+        const renderer = new marked.Renderer();
+        const linkRenderer = renderer.link;
+        renderer.link = (href, title, text) => {
+            const html = linkRenderer.call(renderer, href, title, text);
+            return html.replace(/^<a /, '<a target="_blank" rel="noopener noreferrer" ');
+        };
+        marked.setOptions({ renderer });
+    }
+
+    // Customize UI for demo sites
+    if (window.IS_DEMO_SITE) {
+        document.getElementById('cw-header-title').innerText = "Sales Assistant";
+        document.getElementById('cw-header-subtitle').innerText = "Online | " + (window.DEMO_NAME || "Demo");
+        
+        const initialMsg = document.getElementById('cw-initial-msg');
+        if (initialMsg) {
+            initialMsg.innerHTML = 'Hello! I am the virtual assistant for the ' + (window.DEMO_NAME || 'demo') + ' website. This is a fully customizable template created by Rohollah Ebrahimi. How can I help you today?';
+        }
+    }
+
+    function cwToggleChat() {
+        const isHidden = cwWindow.style.display === 'none' || cwWindow.style.display === '';
+
+        if (isHidden) {
+            cwWindow.style.display = 'flex';
+            setTimeout(() => {
+                cwWindow.style.opacity = '1';
+                cwWindow.style.transform = 'scale(1)';
+            }, 10);
+            cwBtn.classList.add('cw-hidden-btn');
+        } else {
+            cwWindow.style.opacity = '0';
+            cwWindow.style.transform = 'scale(0.9)';
+            cwBtn.classList.remove('cw-hidden-btn');
+            setTimeout(() => {
+                cwWindow.style.display = 'none';
+            }, 300);
+        }
+    }
+
+    async function cwSendMessage(e) {
+        e.preventDefault();
+        const input = document.getElementById('cw-input');
+        const message = input.value.trim();
+        if (!message) return;
+
+        cwAppendMessage(message, 'user');
+        cwChatHistory.push({role: 'user', content: message});
+        input.value = '';
+
+        const loadingId = cwAppendLoading();
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    message: message, 
+                    history: cwChatHistory,
+                    is_demo: window.IS_DEMO_SITE || false,
+                    demo_name: window.DEMO_NAME || ""
+                })
+            });
+            const data = await response.json();
+
+            document.getElementById(loadingId).remove();
+            
+            if (data.error) {
+                cwAppendMessage("⚠️ " + data.error, 'bot');
+            } else {
+                let formattedReply = data.reply;
+                if (typeof marked !== 'undefined') {
+                    formattedReply = marked.parse(data.reply);
+                } else {
+                    formattedReply = data.reply.replace(/\n/g, '<br>');
+                }
+                cwAppendMessage(formattedReply, 'bot', true); 
+                cwChatHistory.push({role: 'assistant', content: data.reply});
+            }
+
+        } catch (error) {
+            console.error("Chat Error:", error);
+            document.getElementById(loadingId).remove();
+            cwAppendMessage("❌ Connection error. Please try again.", 'bot');
+        }
+    }
+
+    function cwAppendMessage(text, sender, isHtml = false) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'cw-msg-wrapper';
+        
+        const div = document.createElement('div');
+        const isUser = sender === 'user';
+        
+        div.className = isUser ? 'cw-msg cw-msg-user' : 'cw-msg cw-msg-bot';
+        
+        if (!isUser) {
+            const senderSpan = document.createElement('span');
+            senderSpan.className = 'cw-msg-sender';
+            senderSpan.innerText = 'Assistant';
+            div.appendChild(senderSpan);
+        }
+        
+        const contentSpan = document.createElement('span');
+        if (isHtml) contentSpan.innerHTML = text;
+        else contentSpan.innerText = text;
+        
+        div.appendChild(contentSpan);
+        wrapper.appendChild(div);
+        
+        cwMessages.appendChild(wrapper);
+        cwMessages.scrollTop = cwMessages.scrollHeight;
+    }
+
+    function cwAppendLoading() {
+        const id = 'loading-' + Date.now();
+        const wrapper = document.createElement('div');
+        wrapper.className = 'cw-msg-wrapper';
+        wrapper.id = id;
+        
+        const div = document.createElement('div');
+        div.className = 'cw-msg cw-msg-bot cw-typing';
+        div.innerHTML = '<span class="cw-msg-sender">Assistant</span><span></span><span></span><span></span>';
+        
+        wrapper.appendChild(div);
+        cwMessages.appendChild(wrapper);
+        cwMessages.scrollTop = cwMessages.scrollHeight;
+        return id;
+    }
+</script>

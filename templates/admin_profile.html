@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Profile</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.tiny.cloud/1/w8vr6yt43j2ye3rljgb50iljf8vpzb3iy2kclr4yc11xk5tb/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+      tinymce.init({
+        selector: '.rich-text',
+        plugins: 'lists link code',
+        toolbar: 'undo redo | bold italic | bullist numlist | link | code',
+        height: 250
+      });
+    </script>
+</head>
+<body class="bg-light">
+    <div class="container mt-5 mb-5">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Edit Profile</h3>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-light btn-sm">Back to Dashboard</a>
+            </div>
+            <div class="card-body p-4">
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    {% for category, message in messages %}
+                      <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
+
+                <form method="POST" enctype="multipart/form-data">
+                    
+                    <div class="row mb-4 align-items-center">
+                        <div class="col-md-3 text-center">
+                            {% if profile.profile_pic %}
+                                <img src="{{ url_for('static', filename='uploads/' + profile.profile_pic) }}" class="img-thumbnail rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-secondary text-white rounded-circle d-flex justify-content-center align-items-center mx-auto" style="width: 150px; height: 150px;">No Image</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label fw-bold">Profile Picture</label>
+                            <input type="file" name="profile_pic" class="form-control">
+                            <small class="text-muted">Upload a clear photo (JPG/PNG).</small>
+                        </div>
+                    </div>
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" name="full_name" class="form-control" value="{{ profile.full_name or '' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Address / Location</label>
+                            <input type="text" name="address" class="form-control" value="{{ profile.address or '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Mobile</label>
+                            <input type="text" name="mobile" class="form-control" value="{{ profile.mobile or '' }}">
+                            <div class="d-flex gap-3 mt-2">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="show_mobile" id="show_mobile" {% if profile.show_mobile %}checked{% endif %}>
+                                    <label class="form-check-label text-muted" for="show_mobile"><small>Show Mobile</small></label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="show_whatsapp" id="show_whatsapp" {% if profile.show_whatsapp %}checked{% endif %}>
+                                    <label class="form-check-label text-muted" for="show_whatsapp"><small>Show WhatsApp</small></label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="email" class="form-control" value="{{ profile.email or '' }}">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="show_email" id="show_email" {% if profile.show_email %}checked{% endif %}>
+                                <label class="form-check-label text-muted" for="show_email"><small>Show Email</small></label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">GitHub URL</label>
+                            <input type="url" name="github" class="form-control" value="{{ profile.github or '' }}">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="show_github" id="show_github" {% if profile.show_github %}checked{% endif %}>
+                                <label class="form-check-label text-muted" for="show_github"><small>Show GitHub</small></label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">LinkedIn URL</label>
+                            <input type="url" name="linkedin" class="form-control" value="{{ profile.linkedin or '' }}">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="show_linkedin" id="show_linkedin" {% if profile.show_linkedin %}checked{% endif %}>
+                                <label class="form-check-label text-muted" for="show_linkedin"><small>Show LinkedIn</small></label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Twitter URL</label>
+                            <input type="url" name="twitter" class="form-control" value="{{ profile.twitter or '' }}">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="show_twitter" id="show_twitter" {% if profile.show_twitter %}checked{% endif %}>
+                                <label class="form-check-label text-muted" for="show_twitter"><small>Show Twitter</small></label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Telegram URL (e.g. t.me/user)</label>
+                            <input type="url" name="telegram" class="form-control" value="{{ profile.telegram or '' }}">
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="show_telegram" id="show_telegram" {% if profile.show_telegram %}checked{% endif %}>
+                                <label class="form-check-label text-muted" for="show_telegram"><small>Show Telegram</small></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label mb-0">About Me (Professional Summary)</label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnGenerateAboutMe">
+                                <i class="bi bi-stars"></i> ✨ AI Generate
+                            </button>
+                        </div>
+                        <textarea name="about_me" id="about_me_textarea" class="rich-text">{{ profile.about_me or '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Interests & Hobbies</label>
+                        <textarea name="interests" class="form-control" rows="3">{{ profile.interests or '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Personality</label>
+                        <textarea name="personality" class="form-control" rows="3">{{ profile.personality or '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Hobbies (Short List)</label>
+                        <input type="text" name="hobbies" class="form-control" value="{{ profile.hobbies or '' }}">
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-success px-5">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('btnGenerateAboutMe').addEventListener('click', async function() {
+            const btn = this;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('{{ url_for("generate_about_me") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if(data.success) {
+                    // Update tinymce if available, else standard textarea
+                    if(typeof tinymce !== 'undefined' && tinymce.get('about_me_textarea')) {
+                        tinymce.get('about_me_textarea').setContent(data.text);
+                    } else {
+                        document.getElementById('about_me_textarea').value = data.text;
+                    }
+                } else {
+                    alert('Error generating summary: ' + data.error);
+                }
+            } catch (err) {
+                alert('Failed to connect to AI server.');
+            } finally {
+                btn.innerHTML = '<i class="bi bi-stars"></i> ✨ AI Generate';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

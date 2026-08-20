@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card-box { 
+            border: none;
+            border-radius: 15px; 
+            transition: all 0.3s ease; 
+            height: 100%;
+        }
+        .card-box:hover { 
+            transform: translateY(-10px); 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
+        .icon-big { font-size: 3.5rem; margin-bottom: 15px; display: block; }
+        .ai-gradient {
+            background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+            border: 1px solid #bbdefb;
+        }
+        .manual-gradient {
+            background: linear-gradient(135deg, #ffffff 0%, #f8d7da 100%);
+            border: 1px solid #f5c2c7;
+        }
+        .navbar-custom {
+            background-color: #212529;
+            padding: 15px 0;
+            margin-bottom: 40px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark navbar-custom shadow-sm">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1 fw-bold"><i class="bi bi-shield-lock"></i> Admin Panel</span>
+            <div>
+                <a href="{{ url_for('admin_account') }}" class="btn btn-warning btn-sm me-2 fw-bold">
+                    <i class="bi bi-gear-fill"></i> Settings
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm fw-bold">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row mb-5">
+            <div class="col-12 text-center text-md-start">
+                <h2 class="fw-bold text-dark">Portfolio Management Dashboard</h2>
+                <p class="text-muted">Welcome, modify your content and AI settings below.</p>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="col-12 text-center mb-4">
+            <a href="{{ url_for('refresh_ai_knowledge') }}" class="btn btn-warning fw-bold shadow-sm">
+                <i class="bi bi-database-fill-gear"></i> Sync AI with Database
+            </a>
+            <p class="text-muted small mt-1">Click after adding new projects or skills.</p>
+        </div>
+
+        <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <a href="{{ url_for('edit_profile') }}" class="text-decoration-none text-dark">
+                    <div class="card shadow-sm card-box p-4">
+                        <i class="bi bi-person-bounding-box icon-big text-primary"></i>
+                        <h5 class="fw-bold">Profile</h5>
+                        <p class="small text-muted">Update bio & photo</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4">
+                <a href="{{ url_for('admin_projects_list') }}" class="text-decoration-none text-dark">
+                    <div class="card shadow-sm card-box p-4">
+                        <i class="bi bi-grid-1x2-fill icon-big text-success"></i>
+                        <h5 class="fw-bold">Projects</h5>
+                        <p class="small text-muted">Showcase your work</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4">
+                <a href="{{ url_for('admin_resume_list') }}" class="text-decoration-none text-dark">
+                    <div class="card shadow-sm card-box p-4">
+                        <i class="bi bi-mortarboard-fill icon-big text-warning"></i>
+                        <h5 class="fw-bold">Resume</h5>
+                        <p class="small text-muted">Exp & Education</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4">
+                <a href="{{ url_for('admin_skills') }}" class="text-decoration-none text-dark">
+                    <div class="card shadow-sm card-box p-4">
+                        <i class="bi bi-lightning-charge-fill icon-big text-info"></i>
+                        <h5 class="fw-bold">Skills</h5>
+                        <p class="small text-muted">Technical abilities</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4">
+                <a href="{{ url_for('admin_demos') }}" class="text-decoration-none text-dark">
+                    <div class="card shadow-sm card-box p-4">
+                        <i class="bi bi-display icon-big text-danger"></i>
+                        <h5 class="fw-bold">Website Demos</h5>
+                        <p class="small text-muted">Upload & Manage Demos</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 mt-4 mb-2">
+                <a href="{{ url_for('admin_ai_settings') }}" class="text-decoration-none text-dark">
+                    <div class="card shadow-sm card-box p-4 border-secondary text-start" style="background-color: #f8f9fa;">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-robot text-secondary me-3" style="font-size: 3rem;"></i>
+                            <div>
+                                <h5 class="fw-bold mb-1">AI Provider Settings</h5>
+                                <p class="small text-muted mb-0">Configure your LLM provider, edit API keys, set models, and manage your token/request limits to avoid extra costs.</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm card-box ai-gradient p-4 position-relative">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <i class="bi bi-stars icon-big text-primary" style="font-size: 3rem;"></i>
+                        </div>
+                        <div class="col-md-9 text-md-start">
+                            <h4 class="fw-bold mb-1">AI Resume Tailor ✨</h4>
+                            <p class="text-muted small mb-0">Use Gemini AI to optimize your resume based on job descriptions.</p>
+                            <a href="{{ url_for('ai_resume_start') }}" class="btn btn-primary btn-sm mt-3 stretched-link fw-bold">
+                                Open AI Tool
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm card-box manual-gradient p-4 position-relative">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <i class="bi bi-tools icon-big text-danger" style="font-size: 3rem;"></i>
+                        </div>
+                        <div class="col-md-9 text-md-start">
+                            <h4 class="fw-bold mb-1">Manual Builder 🛠️</h4>
+                            <p class="text-muted small mb-0">Select items & customize summary for specific jobs manually.</p>
+                            <a href="{{ url_for('manual_resume_builder') }}" class="btn btn-danger btn-sm mt-3 stretched-link fw-bold text-white">
+                                Build Resume
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-5 text-center pb-5">
+            <a href="{{ url_for('index') }}" class="btn btn-dark btn-lg px-5" target="_blank">
+                <i class="bi bi-eye"></i> View Live Site
+            </a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

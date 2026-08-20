@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Marmi Nebrodi | Minimalist Luxury</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* Home specific styles */
+    .hero {
+      position: relative;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .hero-img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+      /* Add a very light overlay to ensure text is readable */
+    }
+    
+    .hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(255,255,255,0.4), rgba(255,255,255,0.8));
+      z-index: -1;
+    }
+
+    .hero-content {
+      text-align: center;
+      max-width: 800px;
+      padding: 0 2rem;
+    }
+
+    .hero-title {
+      font-size: clamp(3rem, 6vw, 5rem);
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-subtitle {
+      font-size: 1rem;
+      color: var(--color-text-secondary);
+      margin-bottom: 3rem;
+      max-width: 600px;
+      margin-inline: auto;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+
+    /* Collection Preview */
+    .collection-preview {
+      background-color: var(--color-bg);
+    }
+
+    .stone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-top: 4rem;
+    }
+
+    .stone-card {
+      display: block;
+      group: transition;
+    }
+
+    .stone-card .img-wrapper {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 4/5;
+      margin-bottom: 1.5rem;
+    }
+
+    .stone-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.6s ease;
+    }
+
+    .stone-card:hover img {
+      transform: scale(1.05);
+    }
+
+    .stone-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stone-card p {
+      font-size: 0.85rem;
+      color: var(--color-text-secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="Home.html" class="brand-logo">
+        <span class="title">Marmi Nebrodi</span>
+        <span class="subtitle">Sicilia 1980</span>
+      </a>
+      <nav class="main-nav">
+        <a href="collection.html" data-i18n="nav.collection">Collezione</a>
+        <a href="quarry.html" data-i18n="nav.quarry">Cava</a>
+        <a href="contact.html" data-i18n="nav.contact">Contatti</a>
+      </nav>
+      <div class="header-actions">
+        <div class="lang-switch">
+          <button class="active" onclick="changeLang('it')" id="lang-it">IT</button>
+          <span>/</span>
+          <button onclick="changeLang('en')" id="lang-en">EN</button>
+        </div>
+        <a href="contact.html" class="btn-primary" data-i18n="nav.quote">Richiedi Campioni</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero fade-in">
+    <img src="assets/hero_minimalist_marble_1787066769972.jpg" alt="Minimalist Luxury Marble" class="hero-img">
+    <div class="hero-content">
+      <h1 class="hero-title" data-i18n="hero.title">La Purezza della Materia</h1>
+      <p class="hero-subtitle" data-i18n="hero.desc">
+        Dalle cave siciliane alle architetture contemporanee. Estraiamo la pietra naturale per i progetti più prestigiosi al mondo con un approccio essenziale e minimale.
+      </p>
+      <div class="hero-actions">
+        <a href="collection.html" class="btn-primary" data-i18n="hero.cta1">Scopri la Collezione</a>
+        <a href="contact.html" class="btn-outline" data-i18n="hero.cta2">Sample Kit</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PREVIEW COLLECTION -->
+  <section class="section-padding collection-preview">
+    <div class="container">
+      <span class="section-label" data-i18n="col.sub">Materie Prime</span>
+      <h2 class="section-title" data-i18n="col.title">Eccellenza Siciliana</h2>
+      
+      <div class="stone-grid">
+        <a href="collection.html#rosso" class="stone-card fade-in">
+          <div class="img-wrapper">
+            <img src="assets/rosso_mazzusa_texture_1787066876607.jpg" alt="Rosso Mazzusa">
+          </div>
+          <h3>Rosso Mazzusa</h3>
+          <p data-i18n="col.rosso">Intensità cromatica e venature decise.</p>
+        </a>
+        <a href="collection.html#lavica" class="stone-card fade-in" style="animation-delay: 0.2s">
+          <div class="img-wrapper">
+            <img src="assets/pietra_lavica_texture_1787066957487.jpg" alt="Pietra Lavica">
+          </div>
+          <h3>Pietra Lavica</h3>
+          <p data-i18n="col.lavica">Basalto vulcanico dall'Etna. Puro e materico.</p>
+        </a>
+        <a href="collection.html#taormina" class="stone-card fade-in" style="animation-delay: 0.4s">
+          <div class="img-wrapper">
+            <img src="assets/pietra_taormina_texture_1787067000246.jpg" alt="Pietra Taormina">
+          </div>
+          <h3>Pietra Taormina</h3>
+          <p data-i18n="col.taormina">Morbidezza calcarea e calore mediterraneo.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="title">Marmi Nebrodi</div>
+          <p>San Marco d'Alunzio • Sicilia</p>
+        </div>
+        <div class="footer-links">
+          <a href="collection.html">Collezione</a>
+          <a href="quarry.html">La Cava</a>
+          <a href="contact.html">Contatti</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; 2026 Marmi Nebrodi. Minimalist Edition.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const i18n = {
+      it: {
+        "nav.collection": "Collezione",
+        "nav.quarry": "Cava",
+        "nav.contact": "Contatti",
+        "nav.quote": "Richiedi Campioni",
+        "hero.title": "La Purezza della Materia",
+        "hero.desc": "Dalle cave siciliane alle architetture contemporanee. Estraiamo la pietra naturale per i progetti più prestigiosi al mondo con un approccio essenziale e minimale.",
+        "hero.cta1": "Scopri la Collezione",
+        "hero.cta2": "Sample Kit",
+        "col.sub": "Materie Prime",
+        "col.title": "Eccellenza Siciliana",
+        "col.rosso": "Intensità cromatica e venature decise.",
+        "col.lavica": "Basalto vulcanico dall'Etna. Puro e materico.",
+        "col.taormina": "Morbidezza calcarea e calore mediterraneo."
+      },
+      en: {
+        "nav.collection": "Collection",
+        "nav.quarry": "Quarry",
+        "nav.contact": "Contact",
+        "nav.quote": "Request Samples",
+        "hero.title": "Purity of Matter",
+        "hero.desc": "From Sicilian quarries to contemporary architecture. We extract natural stone for the world's most prestigious projects with an essential and minimalist approach.",
+        "hero.cta1": "Discover Collection",
+        "hero.cta2": "Sample Kit",
+        "col.sub": "Raw Materials",
+        "col.title": "Sicilian Excellence",
+        "col.rosso": "Chromatic intensity and decisive veins.",
+        "col.lavica": "Volcanic basalt from Etna. Pure and textural.",
+        "col.taormina": "Limestone softness and Mediterranean warmth."
+      }
+    };
+
+    function changeLang(lang) {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang] && i18n[lang][key]) el.innerText = i18n[lang][key];
+      });
+
+      document.getElementById('lang-it').classList.toggle('active', lang === 'it');
+      document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+    }
+  </script>
+</body>
+</html>

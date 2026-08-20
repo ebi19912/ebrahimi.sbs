@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ profile.full_name if profile else 'Portfolio' }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f8f9fa; color: #333; }
+        
+        .hero-section {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .profile-img {
+            width: 180px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 5px solid rgba(255,255,255,0.3);
+            margin-bottom: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .section-title {
+            border-left: 5px solid #2a5298;
+            padding-left: 15px;
+            margin-bottom: 30px;
+            font-weight: 700;
+            color: #1e3c72;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .custom-card {
+            background: white;
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 25px;
+            margin-bottom: 25px;
+            transition: transform 0.3s;
+        }
+        .custom-card:hover { transform: translateY(-5px); }
+        
+        .timeline-item {
+            border-left: 2px solid #e9ecef;
+            padding-left: 20px;
+            padding-bottom: 30px;
+            position: relative;
+        }
+        .timeline-item::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: #2a5298;
+            border-radius: 50%;
+            position: absolute;
+            left: -7px;
+            top: 5px;
+        }
+        
+        .skill-badge {
+            font-size: 0.9rem;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="hero-section">
+        <div class="container">
+            {% if profile and profile.profile_pic %}
+                <img src="{{ url_for('static', filename='uploads/' + profile.profile_pic) }}" alt="{{ profile.full_name }}" class="profile-img">
+            {% else %}
+                <div class="profile-img mx-auto d-flex align-items-center justify-content-center bg-light text-dark display-4">
+                    {{ profile.full_name[0] if profile else 'M' }}
+                </div>
+            {% endif %}
+            
+            <h1 class="display-4 fw-bold">{{ profile.full_name if profile else 'My Name' }}</h1>
+            <p class="lead mb-4">{{ profile.about_me | striptags | truncate(100) if profile else 'Welcome to my portfolio' }}</p>
+            
+            <div class="d-flex justify-content-center gap-3">
+                {% if profile and profile.email and profile.show_email %}
+                <a href="mailto:{{ profile.email }}" class="btn btn-outline-light rounded-pill px-4"><i class="bi bi-envelope"></i> Contact Me</a>
+                {% endif %}
+                <a href="{{ url_for('download_resume') }}" class="btn btn-light text-primary rounded-pill px-4 fw-bold"><i class="bi bi-download"></i> Download Resume</a>
+            </div>
+            
+            <div class="mt-4 text-white-50">
+                <small><i class="bi bi-geo-alt"></i> {{ profile.address if profile }}</small>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                
+                <section id="about" class="mb-5">
+                    <h2 class="section-title">About Me</h2>
+                    <div class="custom-card">
+                        {{ profile.about_me | safe if profile }}
+                    </div>
+                </section>
+
+                <section id="experience" class="mb-5">
+                    <h2 class="section-title">Work Experience</h2>
+                    <div class="custom-card">
+                        {% for item in exp %}
+                        <div class="timeline-item">
+                            <h4 class="mb-1">{{ item.title }}</h4>
+                            <div class="text-primary fw-bold mb-2">{{ item.organization }}</div>
+                            <div class="text-muted small mb-3"><i class="bi bi-calendar"></i> {{ item.duration }}</div>
+                            <div class="text-secondary">{{ item.description | safe }}</div>
+                        </div>
+                        {% else %}
+                        <p>No work experience added yet.</p>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section id="projects" class="mb-5">
+                    <h2 class="section-title">Projects</h2>
+                    
+                    <h5 class="text-success mb-3"><i class="bi bi-check-circle-fill"></i> Completed Projects</h5>
+                    {% for p in completed %}
+                    <div class="custom-card border-start border-success border-4">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h3>{{ p.title }}</h3>
+                            <div>
+                                {% if p.github_link %}<a href="{{ p.github_link }}" class="text-dark me-2"><i class="bi bi-github fs-4"></i></a>{% endif %}
+                                {% if p.video_link %}<a href="{{ p.video_link }}" class="text-danger me-2"><i class="bi bi-youtube fs-4"></i></a>{% endif %}
+                                {% if p.live_link %}<a href="{{ p.live_link }}" class="text-primary"><i class="bi bi-globe fs-4"></i></a>{% endif %}
+                            </div>
+                        </div>
+                        <p>{{ p.short_description }}</p>
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#proj{{ p.id }}">
+                                Read Details
+                            </button>
+                            <div class="collapse mt-3" id="proj{{ p.id }}">
+                                {{ p.full_content | safe }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <h5 class="text-warning mt-5 mb-3"><i class="bi bi-hourglass-split"></i> Ongoing Projects</h5>
+                    <div class="row">
+                        {% for p in ongoing %}
+                        <div class="col-md-6">
+                            <div class="custom-card h-100 bg-light">
+                                <h5>{{ p.title }}</h5>
+                                <p class="small text-muted">{{ p.short_description }}</p>
+                                <span class="badge bg-warning text-dark">In Progress</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                {% if demos %}
+                <section id="demos" class="mb-5">
+                    <h2 class="section-title"><i class="bi bi-display text-primary"></i> Website Demos</h2>
+                    <p class="text-muted mb-4">Explore live interactive demos of my website designs. Everything is fully customizable!</p>
+                    <div class="row g-4">
+                        {% for demo in demos %}
+                        <div class="col-md-6">
+                            <div class="card h-100 shadow-sm border-0" style="border-radius: 15px; overflow: hidden; transition: transform 0.3s ease;">
+                                <div class="card-body p-4 bg-light">
+                                    <h4 class="fw-bold mb-2">{{ demo.title }}</h4>
+                                    <p class="text-muted mb-4" style="min-height: 48px;">{{ demo.description }}</p>
+                                    <a href="/demo/{{ demo.slug }}/" target="_blank" class="btn btn-primary rounded-pill w-100 fw-bold shadow-sm">
+                                        View Live Demo <i class="bi bi-box-arrow-up-right ms-1"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+                {% endif %}
+
+
+                 {% if papers %}
+                 <section id="papers" class="mb-5">
+                     <h2 class="section-title">Publications & Papers</h2>
+                     <div class="custom-card">
+                         {% for item in papers %}
+                         <div class="mb-4">
+                             <h5 class="mb-1"><i class="bi bi-journal-text text-primary"></i> {{ item.title }}</h5>
+                             <div class="text-muted small">{{ item.description | safe }}</div>
+                         </div>
+                         {% endfor %}
+                     </div>
+                 </section>
+                 {% endif %}
+            </div>
+
+            <div class="col-lg-4">
+                
+                <div class="custom-card">
+                    <h5 class="mb-3 fw-bold">Personal Details</h5>
+                    <ul class="list-unstyled text-start">
+                        {% if profile %}
+                        
+                        {% if profile.mobile and profile.show_mobile %}
+                        <li class="mb-2 pb-2 border-bottom" style="font-size: 0.9rem;">
+                            <i class="bi bi-phone text-primary me-2"></i> <a href="tel:{{ profile.mobile }}" class="text-decoration-none text-dark">{{ profile.mobile }}</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if profile.mobile and profile.show_whatsapp %}
+                        <li class="mb-2 pb-2 border-bottom" style="font-size: 0.9rem;">
+                            <i class="bi bi-whatsapp text-success me-2"></i> 
+                            <a href="https://wa.me/{{ profile.mobile | replace('+', '') | replace(' ', '') }}" target="_blank" class="text-decoration-none text-dark">WhatsApp</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if profile.email and profile.show_email %}
+                        <li class="mb-2 pb-2 border-bottom" style="font-size: 0.9rem;">
+                            <i class="bi bi-envelope text-primary me-2"></i> 
+                            <a href="mailto:{{ profile.email }}" class="text-decoration-none text-dark">{{ profile.email }}</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if profile.github and profile.show_github %}
+                        <li class="mb-2 pb-2 border-bottom" style="font-size: 0.9rem;">
+                            <i class="bi bi-github text-primary me-2"></i> 
+                            <a href="{{ profile.github }}" target="_blank" class="text-decoration-none text-dark">GitHub</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if profile.linkedin and profile.show_linkedin %}
+                        <li class="mb-2 pb-2 border-bottom" style="font-size: 0.9rem;">
+                            <i class="bi bi-linkedin text-primary me-2"></i> 
+                            <a href="{{ profile.linkedin }}" target="_blank" class="text-decoration-none text-dark">LinkedIn</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if profile.twitter and profile.show_twitter %}
+                        <li class="mb-2 pb-2 border-bottom" style="font-size: 0.9rem;">
+                            <i class="bi bi-twitter text-primary me-2"></i> 
+                            <a href="{{ profile.twitter }}" target="_blank" class="text-decoration-none text-dark">Twitter</a>
+                        </li>
+                        {% endif %}
+                        
+                        {% if profile.telegram and profile.show_telegram %}
+                        <li class="mb-2 pb-2 border-bottom" style="font-size: 0.9rem;">
+                            <i class="bi bi-telegram text-primary me-2"></i> 
+                            <a href="{{ profile.telegram }}" target="_blank" class="text-decoration-none text-dark">Telegram</a>
+                        </li>
+                        {% endif %}
+
+                        {% if profile.address %}
+                        <li class="mb-2 mt-3">
+                            <i class="bi bi-geo-alt me-2 text-primary"></i> 
+                            {{ profile.address }}
+                        </li>
+                        {% endif %}
+                        
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <div class="custom-card">
+                    <h5 class="mb-3">Professional Skills</h5>
+                    {% for skill in skills %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <span>{{ skill.name }}</span>
+                            <small>{{ skill.level }}%</small>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ skill.level }}%"></div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted small">No skills listed.</p>
+                    {% endfor %}
+                    
+                    {% if profile and profile.interests %}
+                    <hr>
+                    <h6 class="mt-3">Interests</h6>
+                    <p class="small">{{ profile.interests }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="custom-card">
+                    <h5 class="mb-3">Education</h5>
+                    {% for item in edu %}
+                    <div class="mb-3 pb-3 border-bottom">
+                        <div class="fw-bold">{{ item.title }}</div>
+                        <div class="small text-primary">{{ item.organization }}</div>
+                        <div class="small text-muted">{{ item.duration }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if honors %}
+                <div class="custom-card bg-primary text-white">
+                    <h5 class="mb-3"><i class="bi bi-trophy"></i> Honors & Awards</h5>
+                    {% for item in honors %}
+                    <div class="mb-3">
+                        <div class="fw-bold">{{ item.title }}</div>
+                        <div class="small opacity-75">{{ item.organization }} | {{ item.duration }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+        
+        <footer class="text-center py-4 text-muted mt-5">
+            <small>&copy; 2026 {{ profile.full_name if profile }}. All Rights Reserved.</small>
+        </footer>
+    </div>
+
+    {% include 'chat_widget.html' %}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

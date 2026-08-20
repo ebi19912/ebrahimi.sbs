@@ -1,0 +1,18 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.env
+
+# Chroma vector database local files
+instance/chroma_db/
+
+# Frontend node_modules (we track frontend/dist so no Node.js required on server)
+frontend/node_modules/

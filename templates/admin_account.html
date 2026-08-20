@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Account Settings</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        .password-toggle { cursor: pointer; }
+        /* رنگ‌های نوار قدرت رمز */
+        .strength-weak { width: 33%; background-color: #dc3545; }
+        .strength-medium { width: 66%; background-color: #ffc107; }
+        .strength-strong { width: 100%; background-color: #198754; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-shield-lock-fill me-2"></i> Security Settings</h5>
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-outline-light">Dashboard</a>
+                    </div>
+                    <div class="card-body p-4">
+                        
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                          {% if messages %}
+                            {% for category, message in messages %}
+                              <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                          {% endif %}
+                        {% endwith %}
+
+                        <form method="POST" id="securityForm">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Username</label>
+                                <input type="text" name="new_username" class="form-control" value="{{ current_user.username }}" required>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="mb-3">
+                                <label class="form-label text-primary fw-bold">New Password</label>
+                                <div class="input-group">
+                                    <input type="password" name="new_password" id="new_password" class="form-control" placeholder="Leave blank to keep current">
+                                    <span class="input-group-text password-toggle" onclick="togglePassword('new_password', 'icon-new')">
+                                        <i class="bi bi-eye" id="icon-new"></i>
+                                    </span>
+                                </div>
+                                <div class="progress mt-2" style="height: 5px;">
+                                    <div id="strength-bar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small id="strength-text" class="text-muted d-block mt-1" style="font-size: 0.8rem;">
+                                    Use 8+ chars, mixed case, numbers & symbols.
+                                </small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label text-primary fw-bold">Confirm New Password</label>
+                                <div class="input-group">
+                                    <input type="password" name="confirm_password" id="confirm_password" class="form-control" placeholder="Re-enter new password">
+                                    <span class="input-group-text password-toggle" onclick="togglePassword('confirm_password', 'icon-confirm')">
+                                        <i class="bi bi-eye" id="icon-confirm"></i>
+                                    </span>
+                                </div>
+                                <div id="match-error" class="text-danger small mt-1 d-none">
+                                    <i class="bi bi-exclamation-circle-fill"></i> Passwords do not match!
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="mb-4 bg-light p-3 rounded border border-warning">
+                                <label class="form-label fw-bold text-dark">Current Password (Required)</label>
+                                <div class="input-group">
+                                    <input type="password" name="current_password" id="current_password" class="form-control border-warning" required>
+                                    <span class="input-group-text password-toggle border-warning" onclick="togglePassword('current_password', 'icon-curr')">
+                                        <i class="bi bi-eye" id="icon-curr"></i>
+                                    </span>
+                                </div>
+                                <small class="text-muted">Enter current password to save changes.</small>
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100 py-2 fw-bold" id="submitBtn">
+                                <i class="bi bi-check2-circle"></i> Update Securely
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. تابع نمایش/مخفی کردن رمز
+        function togglePassword(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove("bi-eye");
+                icon.classList.add("bi-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.remove("bi-eye-slash");
+                icon.classList.add("bi-eye");
+            }
+        }
+
+        // متغیرها
+        const newPassInput = document.getElementById('new_password');
+        const confirmPassInput = document.getElementById('confirm_password');
+        const strengthBar = document.getElementById('strength-bar');
+        const matchError = document.getElementById('match-error');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // 2. بررسی قدرت رمز عبور
+        newPassInput.addEventListener('input', function() {
+            const val = newPassInput.value;
+            let strength = 0;
+            
+            if (val.length > 0) {
+                if (val.length >= 8) strength++; // طول مناسب
+                if (val.match(/[a-z]/) && val.match(/[A-Z]/)) strength++; // حروف بزرگ و کوچک
+                if (val.match(/\d/)) strength++; // عدد
+                if (val.match(/[^a-zA-Z\d]/)) strength++; // سمبل خاص
+            }
+
+            // تنظیم نوار رنگی
+            strengthBar.className = 'progress-bar';
+            if (val.length === 0) {
+                strengthBar.style.width = '0%';
+            } else if (strength < 2) {
+                strengthBar.classList.add('bg-danger');
+                strengthBar.style.width = '33%';
+            } else if (strength < 4) {
+                strengthBar.classList.add('bg-warning');
+                strengthBar.style.width = '66%';
+            } else {
+                strengthBar.classList.add('bg-success');
+                strengthBar.style.width = '100%';
+            }
+            
+            checkMatch(); // بررسی مجدد تطابق
+        });
+
+        // 3. بررسی یکی بودن رمزها
+        confirmPassInput.addEventListener('input', checkMatch);
+
+        function checkMatch() {
+            const pass1 = newPassInput.value;
+            const pass2 = confirmPassInput.value;
+
+            if (pass1 && pass2) {
+                if (pass1 !== pass2) {
+                    matchError.classList.remove('d-none');
+                    confirmPassInput.classList.add('is-invalid');
+                    confirmPassInput.classList.remove('is-valid');
+                    submitBtn.disabled = true; // غیرفعال کردن دکمه
+                } else {
+                    matchError.classList.add('d-none');
+                    confirmPassInput.classList.remove('is-invalid');
+                    confirmPassInput.classList.add('is-valid');
+                    submitBtn.disabled = false; // فعال کردن دکمه
+                }
+            } else {
+                // اگر فیلدها خالی باشند، ارور نده ولی دکمه فعال باشه (شاید فقط میخواد یوزرنیم عوض کنه)
+                matchError.classList.add('d-none');
+                confirmPassInput.classList.remove('is-invalid');
+                confirmPassInput.classList.remove('is-valid');
+                submitBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

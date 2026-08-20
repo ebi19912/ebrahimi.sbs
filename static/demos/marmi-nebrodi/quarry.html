@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>La Cava | Marmi Nebrodi</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .quarry-hero {
+      position: relative;
+      height: 70vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .quarry-hero img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+    }
+
+    .quarry-hero::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.5);
+      z-index: -1;
+    }
+
+    .quarry-content {
+      text-align: center;
+      padding: 6rem 0;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 3rem;
+      margin-top: 4rem;
+    }
+
+    .feature-card {
+      text-align: left;
+      padding: 2rem;
+      background-color: var(--color-surface);
+      border: 1px solid var(--color-border);
+    }
+
+    .feature-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .feature-card p {
+      font-size: 0.9rem;
+      color: var(--color-text-secondary);
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="Home.html" class="brand-logo">
+        <span class="title">Marmi Nebrodi</span>
+        <span class="subtitle">Sicilia 1980</span>
+      </a>
+      <nav class="main-nav">
+        <a href="collection.html" data-i18n="nav.collection">Collezione</a>
+        <a href="quarry.html" class="active" data-i18n="nav.quarry">Cava</a>
+        <a href="contact.html" data-i18n="nav.contact">Contatti</a>
+      </nav>
+      <div class="header-actions">
+        <div class="lang-switch">
+          <button class="active" onclick="changeLang('it')" id="lang-it">IT</button>
+          <span>/</span>
+          <button onclick="changeLang('en')" id="lang-en">EN</button>
+        </div>
+        <a href="contact.html" class="btn-primary" data-i18n="nav.quote">Richiedi Campioni</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="quarry-hero fade-in">
+    <img src="assets/quarry_minimalist_1787067054044.jpg" alt="Marble Quarry">
+    <div class="container" style="text-align: center;">
+      <span class="section-label" data-i18n="hero.label">Origine & Estrazione</span>
+      <h1 class="section-title" data-i18n="hero.title" style="margin-bottom: 0;">Il Cuore della Montagna</h1>
+    </div>
+  </section>
+
+  <section class="container quarry-content fade-in">
+    <h2 class="section-title" data-i18n="content.title">L'Arte della Cava</h2>
+    <p style="color: var(--color-text-secondary); font-size: 1.1rem; line-height: 1.8;" data-i18n="content.desc">
+      Non siamo semplici commercianti di lastre: siamo cavatori e maestri artigiani. La nostra cava a San Marco d’Alunzio è un bacino di estrazione controllato dove selezioniamo a monte i banchi di pietra più sani e spettacolari. Un processo che rispetta l'ambiente e valorizza la purezza della materia prima.
+    </p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <h3 data-i18n="f1.title">Filiera Controllata</h3>
+        <p data-i18n="f1.desc">Dall'estrazione controllata del monte al collaudo finale in cantiere. Monitoriamo ogni singolo blocco per garantire la massima qualità strutturale ed estetica.</p>
+      </div>
+      <div class="feature-card">
+        <h3 data-i18n="f2.title">Precisione CNC</h3>
+        <p data-i18n="f2.desc">Utilizziamo tecnologie a 5 assi di ultima generazione per lavorazioni tridimensionali, scavi dal pieno e realizzazione di opere monumentali su misura.</p>
+      </div>
+      <div class="feature-card">
+        <h3 data-i18n="f3.title">Sostenibilità</h3>
+        <p data-i18n="f3.desc">Recupero delle acque di lavorazione e minimizzazione degli scarti. Operiamo nel pieno rispetto del paesaggio siciliano e delle sue risorse naturali.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="title">Marmi Nebrodi</div>
+          <p>San Marco d'Alunzio • Sicilia</p>
+        </div>
+        <div class="footer-links">
+          <a href="collection.html">Collezione</a>
+          <a href="quarry.html">La Cava</a>
+          <a href="contact.html">Contatti</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; 2026 Marmi Nebrodi. Minimalist Edition.
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const i18n = {
+      it: {
+        "nav.collection": "Collezione",
+        "nav.quarry": "Cava",
+        "nav.contact": "Contatti",
+        "nav.quote": "Richiedi Campioni",
+        "hero.label": "Origine & Estrazione",
+        "hero.title": "Il Cuore della Montagna",
+        "content.title": "L'Arte della Cava",
+        "content.desc": "Non siamo semplici commercianti di lastre: siamo cavatori e maestri artigiani. La nostra cava a San Marco d’Alunzio è un bacino di estrazione controllato dove selezioniamo a monte i banchi di pietra più sani e spettacolari. Un processo che rispetta l'ambiente e valorizza la purezza della materia prima.",
+        "f1.title": "Filiera Controllata",
+        "f1.desc": "Dall'estrazione controllata del monte al collaudo finale in cantiere. Monitoriamo ogni singolo blocco per garantire la massima qualità strutturale ed estetica.",
+        "f2.title": "Precisione CNC",
+        "f2.desc": "Utilizziamo tecnologie a 5 assi di ultima generazione per lavorazioni tridimensionali, scavi dal pieno e realizzazione di opere monumentali su misura.",
+        "f3.title": "Sostenibilità",
+        "f3.desc": "Recupero delle acque di lavorazione e minimizzazione degli scarti. Operiamo nel pieno rispetto del paesaggio siciliano e delle sue risorse naturali."
+      },
+      en: {
+        "nav.collection": "Collection",
+        "nav.quarry": "Quarry",
+        "nav.contact": "Contact",
+        "nav.quote": "Request Samples",
+        "hero.label": "Origin & Extraction",
+        "hero.title": "Heart of the Mountain",
+        "content.title": "The Art of Quarrying",
+        "content.desc": "We are not mere slab merchants: we are quarrymen and master craftsmen. Our quarry in San Marco d'Alunzio is a controlled extraction basin where we select the healthiest and most spectacular stone banks. A process that respects the environment and enhances the purity of the raw material.",
+        "f1.title": "Controlled Supply Chain",
+        "f1.desc": "From controlled extraction from the mountain to final testing on site. We monitor every single block to guarantee maximum structural and aesthetic quality.",
+        "f2.title": "CNC Precision",
+        "f2.desc": "We use the latest 5-axis technology for three-dimensional machining, solid excavation and the creation of custom monumental works.",
+        "f3.title": "Sustainability",
+        "f3.desc": "Recovery of processing water and minimization of waste. We operate with full respect for the Sicilian landscape and its natural resources."
+      }
+    };
+
+    function changeLang(lang) {
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang] && i18n[lang][key]) el.innerText = i18n[lang][key];
+      });
+
+      document.getElementById('lang-it').classList.toggle('active', lang === 'it');
+      document.getElementById('lang-en').classList.toggle('active', lang === 'en');
+    }
+  </script>
+</body>
+</html>
