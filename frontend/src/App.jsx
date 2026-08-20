@@ -716,7 +716,7 @@ export default function App() {
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t border-slate-200 bg-white py-8 sm:py-12 text-slate-500 text-xs sm:text-sm">
+      <footer className="border-t border-slate-200 bg-white pt-8 pb-24 sm:py-12 text-slate-500 text-xs sm:text-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 text-center md:text-left">
           <div>
             <div className="font-bold text-slate-900 text-sm sm:text-base">{profile.full_name}</div>
