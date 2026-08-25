@@ -27,6 +27,7 @@ class Profile(db.Model):
     linkedin = db.Column(db.String(200))
     twitter = db.Column(db.String(200))
     telegram = db.Column(db.String(200))
+    youtube = db.Column(db.String(200))
     
     show_mobile = db.Column(db.Boolean, default=True)
     show_email = db.Column(db.Boolean, default=True)
@@ -35,6 +36,7 @@ class Profile(db.Model):
     show_twitter = db.Column(db.Boolean, default=True)
     show_telegram = db.Column(db.Boolean, default=True)
     show_whatsapp = db.Column(db.Boolean, default=True)
+    show_youtube = db.Column(db.Boolean, default=True)
     
     address = db.Column(db.String(200))
     about_me = db.Column(db.Text)
@@ -70,6 +72,7 @@ class Project(db.Model):
     github_link = db.Column(db.String(200))
     video_link = db.Column(db.String(200))
     live_link = db.Column(db.String(200))
+    tags = db.Column(db.String(200))
     # فیلد اولویت برای مدیریت ترتیب نمایش
     order = db.Column(db.Integer, default=0)
 

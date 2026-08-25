@@ -32,7 +32,7 @@ import {
   BiCheck,
   BiGlobe
 } from 'react-icons/bi';
-import { FaTelegramPlane, FaWhatsapp } from 'react-icons/fa';
+import { FaTelegramPlane, FaWhatsapp, FaYoutube } from 'react-icons/fa';
 
 // Initial fallback dataset based on real database
 const initialData = {
@@ -144,6 +144,124 @@ const initialData = {
     }
   ],
   demos: []
+};
+
+const ProjectCard = ({ proj, delay }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const hasExtraContent = proj.full_content || proj.video_link;
+  
+  // Parse tags if it's a comma-separated string from the backend
+  let displayTags = [];
+  if (Array.isArray(proj.tags)) {
+    displayTags = proj.tags;
+  } else if (typeof proj.tags === 'string' && proj.tags.trim() !== '') {
+    displayTags = proj.tags.split(',').map(t => t.trim()).filter(t => t);
+  }
+
+  return (
+    <FadeInUp delay={delay} className="min-w-0">
+      <div className="h-full w-full min-w-0 max-w-full bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-8 shadow-xs hover:shadow-xl hover:border-purple-200 transition-all duration-300 flex flex-col justify-between group overflow-hidden">
+        <div className="min-w-0">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-lg sm:text-xl group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300 flex-shrink-0">
+              <BiCodeBlock />
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {proj.status === 'ongoing' ? (
+                <span className="text-[11px] sm:text-xs font-semibold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                  In Progress
+                </span>
+              ) : (
+                <span className="text-[11px] sm:text-xs font-semibold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  Completed
+                </span>
+              )}
+            </div>
+          </div>
+
+          <h3 className="text-base sm:text-xl font-bold text-slate-900 group-hover:text-purple-600 transition-colors [overflow-wrap:anywhere] break-words">
+            {proj.title}
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-600 mt-2.5 sm:mt-3 leading-relaxed [overflow-wrap:anywhere] break-words">
+            {proj.short_description}
+          </p>
+
+          {displayTags && displayTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-4 sm:mt-5">
+              {displayTags.map((tag, tIdx) => (
+                <span key={tIdx} className="text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-slate-100 text-slate-600 font-medium">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          
+          {hasExtraContent && (
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <button 
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-bold transition-colors w-full"
+              >
+                {isExpanded ? 'Show Less' : 'Read More / Watch Demo'}
+                <BiChevronRight className={`text-base transition-transform duration-300 ${isExpanded ? '-rotate-90' : 'rotate-90'}`} />
+              </button>
+              
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="pt-4 pb-2">
+                      {proj.video_link && (
+                        <div className="mb-4 w-full aspect-video rounded-xl overflow-hidden shadow-sm bg-slate-50 border border-slate-100">
+                          <iframe 
+                            src={proj.video_link.includes('watch?v=') ? proj.video_link.replace('watch?v=', 'embed/').split('&')[0] : (proj.video_link.includes('youtu.be/') ? proj.video_link.replace('youtu.be/', 'youtube.com/embed/').split('?')[0] : proj.video_link)} 
+                            className="w-full h-full" 
+                            frameBorder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowFullScreen
+                          ></iframe>
+                        </div>
+                      )}
+                      
+                      {proj.full_content && (
+                        <div className="text-xs sm:text-sm text-slate-600 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: proj.full_content }} />
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+        </div>
+
+        <div className="pt-4 sm:pt-6 mt-5 sm:mt-6 border-t border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {proj.github_link && (
+              <a href={proj.github_link} target="_blank" rel="noreferrer" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-colors" title="GitHub Repository">
+                <FiGithub className="text-sm sm:text-base" />
+              </a>
+            )}
+            {proj.live_link && (
+              <a href={proj.live_link} target="_blank" rel="noreferrer" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-purple-100 hover:bg-purple-600 hover:text-white text-purple-700 flex items-center justify-center transition-colors" title="Live Demo">
+                <FiExternalLink className="text-sm sm:text-base" />
+              </a>
+            )}
+          </div>
+          {proj.live_link ? (
+            <a href={proj.live_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-800">
+              <span>Visit Platform</span><FiArrowRight />
+            </a>
+          ) : (
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-400">Production Ready</span>
+          )}
+        </div>
+      </div>
+    </FadeInUp>
+  );
 };
 
 export default function App() {
@@ -286,6 +404,18 @@ export default function App() {
                       <span>GitHub</span>
                     </a>
                   )}
+
+                  {profile.youtube && (
+                    <a
+                      href={profile.youtube}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-3.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                    >
+                      <FaYoutube className="text-base" />
+                      <span>YouTube</span>
+                    </a>
+                  )}
                 </div>
               </FadeInUp>
 
@@ -399,10 +529,10 @@ export default function App() {
                     <h3 className="text-lg sm:text-xl font-bold text-slate-900 mt-1.5 mb-2 sm:mb-3">{feat.title}</h3>
                     <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{feat.desc}</p>
                   </div>
-                  <div className="mt-6 sm:mt-8 pt-4 border-t border-slate-200/60 flex items-center gap-2 text-xs font-semibold text-slate-900">
+                  <a href="#projects" className="mt-6 sm:mt-8 pt-4 border-t border-slate-200/60 flex items-center gap-2 text-xs font-semibold text-slate-900 hover:text-purple-600 transition-colors cursor-pointer">
                     <span>Explore projects</span>
                     <FiArrowRight className="text-purple-600" />
-                  </div>
+                  </a>
                 </div>
               </FadeInUp>
             ))}
@@ -430,102 +560,7 @@ export default function App() {
           {/* PROJECT CARDS GRID */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 min-w-0">
             {completed.concat(ongoing).map((proj, idx) => (
-              <FadeInUp key={idx} delay={idx * 0.1} className="min-w-0">
-                <div className="h-full w-full min-w-0 max-w-full bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-8 shadow-xs hover:shadow-xl hover:border-purple-200 transition-all duration-300 flex flex-col justify-between group overflow-hidden">
-                  <div className="min-w-0">
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold text-lg sm:text-xl group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300 flex-shrink-0">
-                        <BiCodeBlock />
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {proj.status === 'ongoing' ? (
-                          <span className="text-[11px] sm:text-xs font-semibold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                            In Progress
-                          </span>
-                        ) : (
-                          <span className="text-[11px] sm:text-xs font-semibold px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            Completed
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <h3 className="text-base sm:text-xl font-bold text-slate-900 group-hover:text-purple-600 transition-colors [overflow-wrap:anywhere] break-words">
-                      {proj.title}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-slate-600 mt-2.5 sm:mt-3 leading-relaxed [overflow-wrap:anywhere] break-words">
-                      {proj.short_description}
-                    </p>
-
-                    {proj.tags && (
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-4 sm:mt-5">
-                        {proj.tags.map((tag, tIdx) => (
-                          <span key={tIdx} className="text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg bg-slate-100 text-slate-600 font-medium">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {proj.full_content && (
-                      <div className="text-xs sm:text-sm text-slate-600 mt-4 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: proj.full_content }} />
-                    )}
-
-                    {proj.video_link && (
-                      <div className="mt-4 w-full aspect-video rounded-xl overflow-hidden shadow-sm">
-                        <iframe 
-                          src={proj.video_link.includes('watch?v=') ? proj.video_link.replace('watch?v=', 'embed/').split('&')[0] : (proj.video_link.includes('youtu.be/') ? proj.video_link.replace('youtu.be/', 'youtube.com/embed/').split('?')[0] : proj.video_link)} 
-                          className="w-full h-full" 
-                          frameBorder="0" 
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                          allowFullScreen
-                        ></iframe>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pt-4 sm:pt-6 mt-5 sm:mt-6 border-t border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 sm:gap-3">
-                      {proj.github_link && (
-                        <a
-                          href={proj.github_link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-700 flex items-center justify-center transition-colors"
-                          title="GitHub Repository"
-                        >
-                          <FiGithub className="text-sm sm:text-base" />
-                        </a>
-                      )}
-                      {proj.live_link && (
-                        <a
-                          href={proj.live_link}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-purple-100 hover:bg-purple-600 hover:text-white text-purple-700 flex items-center justify-center transition-colors"
-                          title="Live Demo"
-                        >
-                          <FiExternalLink className="text-sm sm:text-base" />
-                        </a>
-                      )}
-                    </div>
-
-                    {proj.live_link ? (
-                      <a
-                        href={proj.live_link}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-600 hover:text-purple-800"
-                      >
-                        <span>Visit Platform</span>
-                        <FiArrowRight />
-                      </a>
-                    ) : (
-                      <span className="text-[11px] sm:text-xs font-semibold text-slate-400">Production Ready</span>
-                    )}
-                  </div>
-                </div>
-              </FadeInUp>
+              <ProjectCard key={idx} proj={proj} delay={idx * 0.1} />
             ))}
           </div>
         </section>
@@ -742,6 +777,7 @@ export default function App() {
             {profile.github && <a href={profile.github} target="_blank" rel="noreferrer" className="hover:text-purple-600"><FiGithub className="text-base sm:text-lg" /></a>}
             {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noreferrer" className="hover:text-purple-600"><FiLinkedin className="text-base sm:text-lg" /></a>}
             {profile.telegram && <a href={profile.telegram} target="_blank" rel="noreferrer" className="hover:text-purple-600"><FaTelegramPlane className="text-base sm:text-lg" /></a>}
+            {profile.youtube && <a href={profile.youtube} target="_blank" rel="noreferrer" className="hover:text-red-600"><FaYoutube className="text-base sm:text-lg" /></a>}
             {profile.email && <a href={`mailto:${profile.email}`} className="hover:text-purple-600"><FiMail className="text-base sm:text-lg" /></a>}
           </div>
         </div>

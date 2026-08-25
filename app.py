@@ -552,6 +552,7 @@ def new_project():
             github_link=request.form.get('github_link'),
             video_link=request.form.get('video_link'),
             live_link=request.form.get('live_link'),
+            tags=request.form.get('tags'),
             order=0
         )
         db.session.add(new_p)
@@ -572,6 +573,7 @@ def edit_project(id):
         project.github_link = request.form.get('github_link')
         project.video_link = request.form.get('video_link')
         project.live_link = request.form.get('live_link')
+        project.tags = request.form.get('tags')
         db.session.commit()
         flash('Project updated!', 'success')
         return redirect(url_for('admin_projects_list'))
@@ -721,6 +723,7 @@ def edit_profile():
         profile.linkedin = request.form.get('linkedin')
         profile.twitter = request.form.get('twitter')
         profile.telegram = request.form.get('telegram')
+        profile.youtube = request.form.get('youtube')
         
         profile.show_mobile = 'show_mobile' in request.form
         profile.show_email = 'show_email' in request.form
@@ -729,6 +732,7 @@ def edit_profile():
         profile.show_twitter = 'show_twitter' in request.form
         profile.show_telegram = 'show_telegram' in request.form
         profile.show_whatsapp = 'show_whatsapp' in request.form
+        profile.show_youtube = 'show_youtube' in request.form
         
         profile.address = request.form.get('address')
         profile.about_me = request.form.get('about_me')
