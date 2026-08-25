@@ -405,6 +405,18 @@ export default function App() {
                     </a>
                   )}
 
+                  {profile.twitter && (
+                    <a
+                      href={profile.twitter}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center justify-center gap-2 px-4 sm:px-6 py-3 sm:py-3.5 rounded-full bg-blue-500 hover:bg-blue-600 text-white text-xs sm:text-sm font-medium shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                    >
+                      <FiTwitter className="text-base" />
+                      <span>Twitter</span>
+                    </a>
+                  )}
+
                   {profile.youtube && (
                     <a
                       href={profile.youtube}
@@ -529,10 +541,6 @@ export default function App() {
                     <h3 className="text-lg sm:text-xl font-bold text-slate-900 mt-1.5 mb-2 sm:mb-3">{feat.title}</h3>
                     <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{feat.desc}</p>
                   </div>
-                  <a href="#projects" className="mt-6 sm:mt-8 pt-4 border-t border-slate-200/60 flex items-center gap-2 text-xs font-semibold text-slate-900 hover:text-purple-600 transition-colors cursor-pointer">
-                    <span>Explore projects</span>
-                    <FiArrowRight className="text-purple-600" />
-                  </a>
                 </div>
               </FadeInUp>
             ))}
@@ -759,6 +767,17 @@ export default function App() {
                       <span>Message on Telegram</span>
                     </a>
                   )}
+                  {profile.twitter && (
+                    <a
+                      href={profile.twitter}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full bg-blue-500 text-white font-bold text-xs sm:text-sm shadow hover:bg-blue-600 transition"
+                    >
+                      <FiTwitter className="flex-shrink-0" />
+                      <span>Twitter</span>
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
@@ -777,6 +796,7 @@ export default function App() {
             {profile.github && <a href={profile.github} target="_blank" rel="noreferrer" className="hover:text-purple-600"><FiGithub className="text-base sm:text-lg" /></a>}
             {profile.linkedin && <a href={profile.linkedin} target="_blank" rel="noreferrer" className="hover:text-purple-600"><FiLinkedin className="text-base sm:text-lg" /></a>}
             {profile.telegram && <a href={profile.telegram} target="_blank" rel="noreferrer" className="hover:text-purple-600"><FaTelegramPlane className="text-base sm:text-lg" /></a>}
+            {profile.twitter && <a href={profile.twitter} target="_blank" rel="noreferrer" className="hover:text-blue-500"><FiTwitter className="text-base sm:text-lg" /></a>}
             {profile.youtube && <a href={profile.youtube} target="_blank" rel="noreferrer" className="hover:text-red-600"><FaYoutube className="text-base sm:text-lg" /></a>}
             {profile.email && <a href={`mailto:${profile.email}`} className="hover:text-purple-600"><FiMail className="text-base sm:text-lg" /></a>}
           </div>
