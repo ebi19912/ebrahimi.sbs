@@ -12,6 +12,7 @@ import requests
 from dotenv import load_dotenv
 import zipfile
 import shutil
+import time
 
 # Import your database models
 from models import db, Admin, Project, ResumeItem, Skill, Profile, AISettings, DemoSite
@@ -701,7 +702,7 @@ def delete_skill(id):
 @login_required
 def reorder_items():
     data = request.json
-    model_map = {'skill': Skill, 'project': Project, 'resume': ResumeItem}
+    model_map = {'skill': Skill, 'project': Project, 'resume': ResumeItem, 'demo': DemoSite}
     model_cls = model_map.get(data.get('model'))
 
     if not model_cls:
@@ -807,79 +808,167 @@ def admin_account():
 
 # --- Demo Sites Management ---
 
+def process_demo_zip(zip_file, target_dir):
+    """
+    Extracts uploaded demo zip to target_dir and validates that it contains html files.
+    Promotes single subfolder if necessary.
+    Returns (success: bool, error_message: str)
+    """
+    temp_dir = target_dir + '_temp_' + str(int(time.time() * 1000))
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+    os.makedirs(temp_dir, exist_ok=True)
+    
+    zip_filename = secure_filename(zip_file.filename) or 'demo_upload.zip'
+    zip_path = os.path.join(app.config['UPLOAD_FOLDER'], zip_filename)
+    zip_file.save(zip_path)
+    
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(temp_dir)
+        if os.path.exists(zip_path):
+            os.remove(zip_path) # Clean up zip
+            
+        # Check if the extracted zip contained a single root directory
+        extracted_items = os.listdir(temp_dir)
+        if len(extracted_items) == 1:
+            single_item_path = os.path.join(temp_dir, extracted_items[0])
+            if os.path.isdir(single_item_path):
+                # Promote contents up one level
+                for item in os.listdir(single_item_path):
+                    shutil.move(os.path.join(single_item_path, item), temp_dir)
+                os.rmdir(single_item_path)
+                
+        # Check if there's any HTML file
+        has_html = False
+        for root, dirs, files in os.walk(temp_dir):
+            if any(f.lower().endswith('.html') or f.lower().endswith('.htm') for f in files):
+                has_html = True
+                break
+                
+        if not has_html:
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
+            return False, 'The uploaded zip file does not contain any .html files. Please check your zip file.'
+                
+        # Replace target directory with the new contents
+        if os.path.exists(target_dir):
+            shutil.rmtree(target_dir)
+        shutil.move(temp_dir, target_dir)
+        return True, None
+    except Exception as e:
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+        if os.path.exists(zip_path):
+            os.remove(zip_path)
+        return False, f'Error processing zip: {e}'
+
 @app.route('/admin/demos', methods=['GET', 'POST'])
 @login_required
 def admin_demos():
     if request.method == 'POST':
-        title = request.form.get('title')
-        slug = request.form.get('slug')
-        description = request.form.get('description')
+        title = request.form.get('title', '').strip()
+        slug = request.form.get('slug', '').strip().lower()
+        description = request.form.get('description', '').strip()
         zip_file = request.files.get('demo_zip')
         
         if not title or not slug or not zip_file:
             flash('Title, slug, and zip file are required.', 'danger')
             return redirect(url_for('admin_demos'))
             
+        existing = DemoSite.query.filter_by(slug=slug).first()
+        if existing:
+            flash('A demo with this URL slug already exists. Please choose a unique slug.', 'danger')
+            return redirect(url_for('admin_demos'))
+
         media = request.files.get('media_file')
         media_filename = None
         if media and media.filename:
             media_filename = secure_filename(media.filename)
             media.save(os.path.join(app.config['UPLOAD_FOLDER'], media_filename))
             
-        demo = DemoSite(title=title, slug=slug, description=description, media_file=media_filename)
-        db.session.add(demo)
-        
         # Ensure demos directory exists
         demos_dir = os.path.join(app.root_path, 'static', 'demos')
         os.makedirs(demos_dir, exist_ok=True)
         
         target_dir = os.path.join(demos_dir, slug)
-        if os.path.exists(target_dir):
-            shutil.rmtree(target_dir) # Overwrite if exists
-        os.makedirs(target_dir)
-        
-        try:
-            zip_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(zip_file.filename))
-            zip_file.save(zip_path)
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(target_dir)
-            if os.path.exists(zip_path):
-                os.remove(zip_path) # Clean up zip
-                
-            # Check if the extracted zip contained a single root directory
-            extracted_items = os.listdir(target_dir)
-            if len(extracted_items) == 1:
-                single_item_path = os.path.join(target_dir, extracted_items[0])
-                if os.path.isdir(single_item_path):
-                    # Promote contents up one level
-                    for item in os.listdir(single_item_path):
-                        shutil.move(os.path.join(single_item_path, item), target_dir)
-                    os.rmdir(single_item_path)
-                    
-            # Check if there's any HTML file
-            has_html = False
-            for root, dirs, files in os.walk(target_dir):
-                if any(f.lower().endswith('.html') or f.lower().endswith('.htm') for f in files):
-                    has_html = True
-                    break
-                    
-            if not has_html:
-                db.session.rollback()
-                if os.path.exists(target_dir):
-                    shutil.rmtree(target_dir)
-                flash('The uploaded zip file does not contain any .html files. Please check your zip file.', 'danger')
-                return redirect(url_for('admin_demos'))
-                    
-            db.session.commit()
-            flash('Demo site uploaded successfully.', 'success')
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error processing zip: {e}', 'danger')
+        success, err = process_demo_zip(zip_file, target_dir)
+        if not success:
+            flash(err, 'danger')
+            return redirect(url_for('admin_demos'))
             
+        demo = DemoSite(title=title, slug=slug, description=description, media_file=media_filename)
+        db.session.add(demo)
+        db.session.commit()
+        flash('Demo site uploaded and deployed successfully.', 'success')
         return redirect(url_for('admin_demos'))
         
     demos = DemoSite.query.order_by(DemoSite.order.asc()).all()
     return render_template('admin_demos.html', demos=demos)
+
+@app.route('/admin/demos/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_demo(id):
+    demo = DemoSite.query.get_or_404(id)
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        slug = request.form.get('slug', '').strip().lower()
+        description = request.form.get('description', '').strip()
+        is_active = True if request.form.get('is_active') in ['1', 'on', 'true', True] else False
+        
+        if not title or not slug:
+            flash('Title and URL slug are required.', 'danger')
+            return render_template('admin_edit_demo.html', demo=demo)
+            
+        # Check slug uniqueness against other demos
+        conflict = DemoSite.query.filter(DemoSite.slug == slug, DemoSite.id != demo.id).first()
+        if conflict:
+            flash('A demo with this URL slug already exists. Please choose a unique slug.', 'danger')
+            return render_template('admin_edit_demo.html', demo=demo)
+            
+        demos_dir = os.path.join(app.root_path, 'static', 'demos')
+        os.makedirs(demos_dir, exist_ok=True)
+        
+        old_slug = demo.slug
+        old_target_dir = os.path.join(demos_dir, old_slug)
+        new_target_dir = os.path.join(demos_dir, slug)
+        
+        # If slug changed, rename the static directory
+        if slug != old_slug:
+            if os.path.exists(old_target_dir):
+                if os.path.exists(new_target_dir):
+                    shutil.rmtree(new_target_dir)
+                shutil.move(old_target_dir, new_target_dir)
+            demo.slug = slug
+            
+        # Optional Zip Replacement
+        zip_file = request.files.get('demo_zip')
+        if zip_file and zip_file.filename:
+            target_dir = os.path.join(demos_dir, demo.slug)
+            success, err = process_demo_zip(zip_file, target_dir)
+            if not success:
+                flash(err, 'danger')
+                return render_template('admin_edit_demo.html', demo=demo)
+                
+        # Optional Media File Replacement / Removal
+        if request.form.get('remove_media') == '1':
+            demo.media_file = None
+            
+        media = request.files.get('media_file')
+        if media and media.filename:
+            media_filename = secure_filename(media.filename)
+            media.save(os.path.join(app.config['UPLOAD_FOLDER'], media_filename))
+            demo.media_file = media_filename
+            
+        demo.title = title
+        demo.description = description
+        demo.is_active = is_active
+        
+        db.session.commit()
+        flash('Demo updated successfully.', 'success')
+        return redirect(url_for('admin_demos'))
+        
+    return render_template('admin_edit_demo.html', demo=demo)
 
 @app.route('/admin/demos/delete/<int:id>', methods=['POST'])
 @login_required

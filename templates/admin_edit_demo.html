@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit Demo - {{ demo.title }}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar-custom { background-color: #212529; padding: 15px 0; margin-bottom: 40px; }
+        .media-preview-container {
+            max-width: 300px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #dee2e6;
+            background: #000;
+        }
+        .media-preview-container img, .media-preview-container video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark navbar-custom shadow-sm">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1 fw-bold"><i class="bi bi-shield-lock"></i> Admin Panel - Edit Demo</span>
+            <div>
+                <a href="{{ url_for('admin_demos') }}" class="btn btn-outline-light btn-sm fw-bold">
+                    <i class="bi bi-arrow-left"></i> Back to Demos
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mb-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+                        <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i> Edit Demo: {{ demo.title }}</h5>
+                        <a href="/demo/{{ demo.slug }}/" target="_blank" class="btn btn-light btn-sm fw-bold text-primary">
+                            <i class="bi bi-box-arrow-up-right me-1"></i> View Live Demo
+                        </a>
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="POST" enctype="multipart/form-data">
+                            <div class="row">
+                                <div class="col-md-7 mb-3">
+                                    <label class="form-label fw-bold">Demo Title <span class="text-danger">*</span></label>
+                                    <input type="text" name="title" class="form-control" value="{{ demo.title }}" required placeholder="e.g. Marmi Nebrodi">
+                                </div>
+                                <div class="col-md-5 mb-3">
+                                    <label class="form-label fw-bold">URL Slug <span class="text-danger">*</span></label>
+                                    <input type="text" name="slug" class="form-control" value="{{ demo.slug }}" required placeholder="e.g. marmi-nebrodi">
+                                    <small class="text-muted">Live URL: <code>/demo/{{ demo.slug }}/</code></small>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Description</label>
+                                <textarea name="description" class="form-control" rows="3" placeholder="Brief summary of this demo...">{{ demo.description or '' }}</textarea>
+                            </div>
+
+                            <div class="form-check form-switch mb-4">
+                                <input class="form-check-input" type="checkbox" role="switch" id="is_active" name="is_active" value="1" {% if demo.is_active %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="is_active">Visible / Active on public website</label>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <!-- Demo Template ZIP Replacement -->
+                            <div class="card bg-light border-0 mb-4">
+                                <div class="card-body">
+                                    <h6 class="card-title fw-bold text-dark mb-2">
+                                        <i class="bi bi-file-earmark-zip text-warning me-1"></i> Update Demo Template (.zip)
+                                    </h6>
+                                    <p class="text-muted small mb-2">
+                                        Upload a new <code>.zip</code> file only if you want to replace the current demo website files.
+                                        Leave this empty to keep the existing demo files intact.
+                                    </p>
+                                    <input type="file" name="demo_zip" class="form-control" accept=".zip">
+                                    <small class="text-muted">Must contain index.html (or inside a root folder) within the zip.</small>
+                                </div>
+                            </div>
+
+                            <!-- Cover Media Replacement / Removal -->
+                            <div class="card bg-light border-0 mb-4">
+                                <div class="card-body">
+                                    <h6 class="card-title fw-bold text-dark mb-2">
+                                        <i class="bi bi-camera-reels text-info me-1"></i> Demo Cover Media (Photo / Video)
+                                    </h6>
+                                    
+                                    {% if demo.media_file %}
+                                    <div class="mb-3">
+                                        <label class="form-label text-muted small d-block">Current Cover Media:</label>
+                                        <div class="media-preview-container mb-2">
+                                            {% if demo.media_file.lower().endswith(('.mp4', '.webm', '.ogg', '.mov')) %}
+                                                <video controls playsinline>
+                                                    <source src="{{ url_for('static', filename='uploads/' + demo.media_file) }}">
+                                                    Your browser does not support the video tag.
+                                                </video>
+                                            {% else %}
+                                                <img src="{{ url_for('static', filename='uploads/' + demo.media_file) }}" alt="Demo Cover">
+                                            {% endif %}
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="remove_media" value="1" id="remove_media">
+                                            <label class="form-check-label text-danger small fw-semibold" for="remove_media">
+                                                <i class="bi bi-trash"></i> Remove current cover media
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
+                                    <label class="form-label small text-muted">Upload New Cover File (replaces current):</label>
+                                    <input type="file" name="media_file" class="form-control" accept="image/*,video/*">
+                                    <small class="text-muted">Optional: upload a cover image or video for display in the website demos section.</small>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mt-4">
+                                <a href="{{ url_for('admin_demos') }}" class="btn btn-secondary px-4">
+                                    <i class="bi bi-x-circle me-1"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary px-5 fw-bold shadow-sm">
+                                    <i class="bi bi-check-circle me-1"></i> Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
