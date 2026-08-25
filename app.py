@@ -544,6 +544,12 @@ def admin_projects_list():
 @login_required
 def new_project():
     if request.method == 'POST':
+        filename = None
+        media = request.files.get('media_file')
+        if media and media.filename:
+            filename = secure_filename(media.filename)
+            media.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
         new_p = Project(
             title=request.form.get('title'),
             status=request.form.get('status'),
@@ -553,6 +559,7 @@ def new_project():
             video_link=request.form.get('video_link'),
             live_link=request.form.get('live_link'),
             tags=request.form.get('tags'),
+            media_file=filename,
             order=0
         )
         db.session.add(new_p)
@@ -574,6 +581,13 @@ def edit_project(id):
         project.video_link = request.form.get('video_link')
         project.live_link = request.form.get('live_link')
         project.tags = request.form.get('tags')
+        
+        media = request.files.get('media_file')
+        if media and media.filename:
+            filename = secure_filename(media.filename)
+            media.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            project.media_file = filename
+            
         db.session.commit()
         flash('Project updated!', 'success')
         return redirect(url_for('admin_projects_list'))
@@ -806,7 +820,13 @@ def admin_demos():
             flash('Title, slug, and zip file are required.', 'danger')
             return redirect(url_for('admin_demos'))
             
-        demo = DemoSite(title=title, slug=slug, description=description)
+        media = request.files.get('media_file')
+        media_filename = None
+        if media and media.filename:
+            media_filename = secure_filename(media.filename)
+            media.save(os.path.join(app.config['UPLOAD_FOLDER'], media_filename))
+            
+        demo = DemoSite(title=title, slug=slug, description=description, media_file=media_filename)
         db.session.add(demo)
         
         # Ensure demos directory exists

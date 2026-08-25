@@ -148,7 +148,7 @@ const initialData = {
 
 const ProjectCard = ({ proj, delay }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const hasExtraContent = proj.full_content || proj.video_link;
+  const hasExtraContent = proj.full_content || proj.video_link || proj.media_file;
   
   // Parse tags if it's a comma-separated string from the backend
   let displayTags = [];
@@ -215,7 +215,15 @@ const ProjectCard = ({ proj, delay }) => {
                     className="overflow-hidden"
                   >
                     <div className="pt-4 pb-2">
-                      {proj.video_link && (
+                      {proj.media_file ? (
+                        <div className="mb-4 w-full aspect-video rounded-xl overflow-hidden shadow-sm bg-slate-50 border border-slate-100 flex items-center justify-center">
+                          {proj.media_file.match(/\.(mp4|webm|ogg)$/i) ? (
+                            <video src={`/static/uploads/${proj.media_file}`} controls className="w-full h-full object-cover"></video>
+                          ) : (
+                            <img src={`/static/uploads/${proj.media_file}`} alt={proj.title} className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                      ) : proj.video_link ? (
                         <div className="mb-4 w-full aspect-video rounded-xl overflow-hidden shadow-sm bg-slate-50 border border-slate-100">
                           <iframe 
                             src={proj.video_link.includes('watch?v=') ? proj.video_link.replace('watch?v=', 'embed/').split('&')[0] : (proj.video_link.includes('youtu.be/') ? proj.video_link.replace('youtu.be/', 'youtube.com/embed/').split('?')[0] : proj.video_link)} 
@@ -225,7 +233,7 @@ const ProjectCard = ({ proj, delay }) => {
                             allowFullScreen
                           ></iframe>
                         </div>
-                      )}
+                      ) : null}
                       
                       {proj.full_content && (
                         <div className="text-xs sm:text-sm text-slate-600 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: proj.full_content }} />
@@ -331,6 +339,9 @@ export default function App() {
             <a href="#about" className="hover:text-purple-600 transition-colors">About</a>
             <a href="#features" className="hover:text-purple-600 transition-colors">Specialties</a>
             <a href="#projects" className="hover:text-purple-600 transition-colors">Projects</a>
+            {demos && demos.length > 0 && (
+              <a href="#demos" className="hover:text-purple-600 transition-colors">Demos</a>
+            )}
             <a href="#skills" className="hover:text-purple-600 transition-colors">Skills</a>
             <a href="#experience" className="hover:text-purple-600 transition-colors">Experience</a>
             <a href="#contact" className="hover:text-purple-600 transition-colors">Contact</a>
@@ -597,9 +608,19 @@ export default function App() {
                 <FadeInUp key={idx} delay={idx * 0.1}>
                   <div className="h-full bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs hover:shadow-xl hover:border-purple-200 transition-all duration-300 flex flex-col justify-between group overflow-hidden">
                     <div>
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg sm:text-xl mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
-                        <BiBookOpen />
-                      </div>
+                      {demo.media_file ? (
+                        <div className="w-full aspect-video rounded-xl overflow-hidden mb-4 shadow-sm">
+                          {demo.media_file.match(/\.(mp4|webm|ogg)$/i) ? (
+                            <video src={`/static/uploads/${demo.media_file}`} autoPlay loop muted playsInline className="w-full h-full object-cover"></video>
+                          ) : (
+                            <img src={`/static/uploads/${demo.media_file}`} alt={demo.title} className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-lg sm:text-xl mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
+                          <BiBookOpen />
+                        </div>
+                      )}
                       <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-purple-600 transition-colors break-words">
                         {demo.title}
                       </h3>

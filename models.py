@@ -73,6 +73,7 @@ class Project(db.Model):
     video_link = db.Column(db.String(200))
     live_link = db.Column(db.String(200))
     tags = db.Column(db.String(200))
+    media_file = db.Column(db.String(200)) # Uploaded image or video file
     # فیلد اولویت برای مدیریت ترتیب نمایش
     order = db.Column(db.Integer, default=0)
 
@@ -112,6 +113,7 @@ class DemoSite(db.Model):
     title = db.Column(db.String(200))
     slug = db.Column(db.String(200), unique=True)
     description = db.Column(db.Text)
-    cover_image = db.Column(db.String(100)) # Filename of cover
+    cover_image = db.Column(db.String(100)) # Filename of cover (legacy)
+    media_file = db.Column(db.String(200)) # Uploaded image or video file
     is_active = db.Column(db.Boolean, default=True)
     order = db.Column(db.Integer, default=0)

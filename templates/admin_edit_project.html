@@ -23,7 +23,7 @@
                 <a href="{{ url_for('admin_projects_list') }}" class="btn btn-outline-light btn-sm">Back to List</a>
             </div>
             <div class="card-body p-4">
-                <form method="POST">
+                <form method="POST" enctype="multipart/form-data">
                     
                     <div class="row">
                         <div class="col-md-8 mb-3">
@@ -59,12 +59,24 @@
                                     <input type="url" name="github_link" class="form-control" placeholder="https://github.com/..." value="{{ project.github_link if project else '' }}">
                                 </div>
                                 <div class="col-md-4 mb-2">
-                                    <label class="form-label">📺 Video Demo Link</label>
+                                    <label class="form-label">📺 YouTube Video Link</label>
                                     <input type="url" name="video_link" class="form-control" placeholder="https://youtube.com/..." value="{{ project.video_link if project else '' }}">
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <label class="form-label">🌐 Live Website Link</label>
                                     <input type="url" name="live_link" class="form-control" placeholder="https://mysite.com" value="{{ project.live_link if project else '' }}">
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-12 mb-2">
+                                    <label class="form-label">🎥 Upload Media (Video or Photo)</label>
+                                    <input type="file" name="media_file" class="form-control" accept="image/*,video/*">
+                                    <small class="text-muted">Upload a direct video/photo for the project. If provided, this overrides YouTube link.</small>
+                                    {% if project and project.media_file %}
+                                        <div class="mt-2 text-success">
+                                            Current media: <a href="{{ url_for('static', filename='uploads/' + project.media_file) }}" target="_blank">View File</a>
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
