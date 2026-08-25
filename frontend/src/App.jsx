@@ -466,6 +466,22 @@ export default function App() {
                         ))}
                       </div>
                     )}
+                    
+                    {proj.full_content && (
+                      <div className="text-xs sm:text-sm text-slate-600 mt-4 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: proj.full_content }} />
+                    )}
+
+                    {proj.video_link && (
+                      <div className="mt-4 w-full aspect-video rounded-xl overflow-hidden shadow-sm">
+                        <iframe 
+                          src={proj.video_link.includes('watch?v=') ? proj.video_link.replace('watch?v=', 'embed/').split('&')[0] : (proj.video_link.includes('youtu.be/') ? proj.video_link.replace('youtu.be/', 'youtube.com/embed/').split('?')[0] : proj.video_link)} 
+                          className="w-full h-full" 
+                          frameBorder="0" 
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-4 sm:pt-6 mt-5 sm:mt-6 border-t border-slate-100 flex items-center justify-between">
