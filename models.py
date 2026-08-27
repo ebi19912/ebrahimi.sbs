@@ -44,6 +44,7 @@ class Profile(db.Model):
     personality = db.Column(db.Text)
     hobbies = db.Column(db.Text)
     profile_pic = db.Column(db.String(100)) # Filename of the uploaded picture
+    resume_template = db.Column(db.String(50), default='modern') # Active resume PDF template
 
 class ResumeItem(db.Model):
     """
@@ -117,3 +118,26 @@ class DemoSite(db.Model):
     media_file = db.Column(db.String(200)) # Uploaded image or video file
     is_active = db.Column(db.Boolean, default=True)
     order = db.Column(db.Integer, default=0)
+
+class PageVisit(db.Model):
+    """
+    Model for tracking page views and visitor analytics.
+    """
+    __tablename__ = 'page_visits'
+    id = db.Column(db.Integer, primary_key=True)
+    ip_address = db.Column(db.String(64), index=True)
+    country = db.Column(db.String(100), default='Unknown')
+    country_code = db.Column(db.String(10), default='XX')
+    city = db.Column(db.String(100), default='Unknown')
+    isp = db.Column(db.String(200), default='')
+    path = db.Column(db.String(500), index=True)
+    page_title = db.Column(db.String(200), default='')
+    referrer = db.Column(db.String(1000), default='')
+    referrer_domain = db.Column(db.String(200), default='Direct')
+    user_agent = db.Column(db.String(500), default='')
+    device_type = db.Column(db.String(50), default='Desktop') # Desktop, Mobile, Tablet, Bot
+    browser = db.Column(db.String(100), default='Other')
+    os = db.Column(db.String(100), default='Other')
+    is_bot = db.Column(db.Boolean, default=False)
+    visitor_hash = db.Column(db.String(64), index=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)

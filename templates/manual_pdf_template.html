@@ -2,231 +2,348 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Custom Resume</title>
+    <title>{{ data.full_name }} - Resume</title>
     <style>
         @page {
             size: A4;
-            margin: 1.5cm;
-        }
-        body {
-            font-family: Helvetica, sans-serif;
-            color: #333;
-            line-height: 1.5;
-            font-size: 11pt;
+            margin: 1.2cm 1.4cm 1.2cm 1.4cm;
         }
         
-        /* Header Section */
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            line-height: 1.35;
+            font-size: 9.5pt;
+        }
+
+        /* --- Header Section --- */
         .header {
             text-align: center;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24pt;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .target-role {
-            font-size: 14pt;
-            color: #2c3e50;
-            margin-top: 5px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        .contact-info {
-            font-size: 10pt;
-            color: #555;
-            margin-top: 5px;
-        }
-
-        /* Sections */
-        h3 {
-            background-color: #f4f4f4;
-            padding: 5px 10px;
-            border-left: 5px solid #2c3e50;
-            color: #2c3e50;
-            margin-top: 20px;
             margin-bottom: 10px;
-            text-transform: uppercase;
-            font-size: 12pt;
+            padding-bottom: 8px;
+            border-bottom: 1.5px solid #0f172a;
         }
 
-        /* Items */
-        .item {
-            margin-bottom: 15px;
+        .name {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #0f172a;
+            letter-spacing: 0.5px;
+            margin: 0 0 3px 0;
+            text-transform: uppercase;
+        }
+
+        .target-role {
+            font-size: 10.5pt;
+            font-weight: bold;
+            color: #2563eb;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .contact-bar {
+            font-size: 8.5pt;
+            color: #475569;
+            line-height: 1.4;
+        }
+
+        .contact-bar a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .separator {
+            color: #94a3b8;
+            padding: 0 4px;
+        }
+
+        /* --- Section Titles --- */
+        .section-header {
+            font-size: 10pt;
+            font-weight: bold;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            border-bottom: 1.2px solid #2563eb;
+            padding-bottom: 2px;
+            margin-top: 10px;
+            margin-bottom: 6px;
+        }
+
+        /* --- Entry Table Layout (ATS friendly & exact stream order) --- */
+        .entry-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1px;
+        }
+
+        .entry-table td {
+            padding: 0;
+            vertical-align: top;
+        }
+
+        .entry-title {
+            font-size: 9.5pt;
+            font-weight: bold;
+            color: #0f172a;
+            text-align: left;
+        }
+
+        .entry-date {
+            font-size: 8.5pt;
+            font-weight: bold;
+            color: #475569;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .entry-org {
+            font-size: 9pt;
+            font-style: italic;
+            color: #334155;
+            text-align: left;
+        }
+
+        /* --- Content & Lists --- */
+        .summary-text {
+            font-size: 9pt;
+            color: #334155;
+            text-align: justify;
+            line-height: 1.35;
+            margin-bottom: 4px;
+        }
+
+        .item-block {
+            margin-bottom: 8px;
             page-break-inside: avoid;
         }
-        .item-header {
-            width: 100%;
+
+        .description {
+            font-size: 9pt;
+            color: #334155;
+            margin-top: 2px;
+            line-height: 1.35;
+        }
+
+        .description ul {
+            margin: 2px 0 3px 14px;
+            padding: 0;
+        }
+
+        .description li {
             margin-bottom: 2px;
         }
-        .title {
-            font-weight: bold;
-            font-size: 12pt;
-            color: #000;
-        }
-        .date {
-            float: right;
-            font-size: 10pt;
-            color: #666;
-            font-weight: bold;
-        }
-        .org {
-            font-style: italic;
-            color: #444;
-            font-size: 11pt;
-            display: block;
-        }
-        .description {
-            margin-top: 5px;
-            text-align: justify;
-            font-size: 10.5pt;
-        }
-        
-        /* Skills */
-        .skills-container {
-            margin-top: 5px;
-        }
-        .skill-badge {
-            display: inline-block;
-            background-color: #eee;
-            padding: 2px 8px;
-            margin: 2px;
-            border-radius: 4px;
-            font-size: 9pt;
-            border: 1px solid #ddd;
-        }
-        
-        /* Projects Status */
-        .project-status {
-            font-size: 8pt;
-            padding: 2px 4px;
-            border-radius: 3px;
-            vertical-align: middle;
-            margin-left: 5px;
-        }
-        .status-completed { background: #d4edda; color: #155724; }
-        .status-ongoing { background: #fff3cd; color: #856404; }
 
-        a { color: #007bff; text-decoration: none; }
+        .description p {
+            margin: 2px 0;
+        }
+
+        /* --- Skills Grid Table --- */
+        .skills-grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2px;
+            margin-bottom: 4px;
+        }
+
+        .skills-grid-table td {
+            padding: 2px 4px;
+            vertical-align: middle;
+            font-size: 8.5pt;
+            color: #1e293b;
+        }
+
+        /* --- Project Badges --- */
+        .badge-status {
+            font-size: 7.5pt;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-completed { background-color: #dcfce7; color: #166534; }
+        .status-ongoing { background-color: #fef3c7; color: #92400e; }
+
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
 
+    <!-- Header Section -->
     <div class="header">
-        <h1>{{ data.full_name }}</h1>
+        <h1 class="name">{{ data.full_name }}</h1>
         
         {% if data.target_role %}
             <div class="target-role">{{ data.target_role }}</div>
         {% endif %}
 
-        <div class="contact-info">
-            {% if data.email and data.show_email %}{{ data.email }} | {% endif %}
-            {% if data.mobile and data.show_mobile %}{{ data.mobile }} | {% endif %}
-            {{ request.host_url.rstrip('/') }}
-            {% if data.linkedin and data.show_linkedin %}<br>LinkedIn: {{ data.linkedin }}{% endif %}
-            {% if data.github and data.show_github %} | GitHub: {{ data.github }}{% endif %}
-            {% if data.address %}<br>{{ data.address }}{% endif %}
+        <div class="contact-bar">
+            {% if data.address %}{{ data.address }}{% endif %}
+            {% if data.email and data.show_email %}<span class="separator">|</span><a href="mailto:{{ data.email }}">{{ data.email }}</a>{% endif %}
+            {% if data.mobile and data.show_mobile %}<span class="separator">|</span>{{ data.mobile }}{% endif %}
+            {% if data.linkedin and data.show_linkedin %}<span class="separator">|</span><a href="{{ data.linkedin }}">{{ data.linkedin | clean_url }}</a>{% endif %}
+            {% if data.github and data.show_github %}<span class="separator">|</span><a href="{{ data.github }}">{{ data.github | clean_url }}</a>{% endif %}
+            {% if request and request.host_url %}<span class="separator">|</span><a href="{{ request.host_url }}">{{ request.host_url | clean_url }}</a>{% endif %}
         </div>
     </div>
 
+    <!-- Professional Summary -->
     {% if data.summary %}
-    <section>
-        <h3>Professional Summary</h3>
-        <div class="description">{{ data.summary | safe }}</div>
-    </section>
+    <div class="section-header">Professional Summary</div>
+    <div class="summary-text">
+        {{ data.summary | clean_pdf_html | safe }}
+    </div>
     {% endif %}
 
+    <!-- Technical Skills -->
     {% if data.skills %}
-    <section>
-        <h3>Skills</h3>
-        <div class="skills-container">
-            {% for skill in data.skills %}
-                <span class="skill-badge">{{ skill.name }} ({{ skill.level }}%)</span>
+    <div class="section-header">Technical Skills</div>
+    <table class="skills-grid-table">
+        {% for row in data.skills | batch(2) %}
+        <tr>
+            {% for s in row %}
+            <td width="50%">
+                &bull; <strong>{{ s.name }}</strong>
+            </td>
             {% endfor %}
-        </div>
-    </section>
+            {% if row | length == 1 %}
+            <td width="50%"></td>
+            {% endif %}
+        </tr>
+        {% endfor %}
+    </table>
     {% endif %}
 
+    <!-- Work Experience -->
     {% if data.experience %}
-    <section>
-        <h3>Work Experience</h3>
-        {% for item in data.experience %}
-        <div class="item">
-            <div class="item-header">
-                <span class="title">{{ item.title }}</span>
-                <span class="date">{{ item.duration }}</span>
-            </div>
-            <span class="org">{{ item.organization }}</span>
-            <div class="description">{{ item.description | safe }}</div>
+    <div class="section-header">Work Experience</div>
+    {% for item in data.experience %}
+    <div class="item-block">
+        <table class="entry-table">
+            <tr>
+                <td class="entry-title">{{ item.title }}</td>
+                <td class="entry-date">{{ item.duration }}</td>
+            </tr>
+            <tr>
+                <td class="entry-org" colspan="2">{{ item.organization }}</td>
+            </tr>
+        </table>
+        {% if item.description %}
+        <div class="description">
+            {{ item.description | clean_pdf_html | safe }}
         </div>
-        {% endfor %}
-    </section>
+        {% endif %}
+    </div>
+    {% endfor %}
     {% endif %}
 
-    {% if data.projects %}
-    <section>
-        <h3>Key Projects</h3>
-        {% for p in data.projects %}
-        <div class="item">
-            <div class="item-header">
-                <span class="title">{{ p.title }}</span>
-                <span class="project-status {{ 'status-completed' if p.status == 'completed' else 'status-ongoing' }}">
-                    {{ 'Completed' if p.status == 'completed' else 'Ongoing' }}
-                </span>
-            </div>
-            <div class="description">
-                {{ p.short_description }}
-                
-                {% if p.full_content %}
-                    <br>
-                    {{ p.full_content | safe }}
-                {% endif %}
-                
-                {% if p.github_link %}
-                <br>
-                <a href="{{ p.github_link }}">GitHub Repository</a>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-    </section>
-    {% endif %}
-
+    <!-- Education -->
     {% if data.education %}
-    <section>
-        <h3>Education</h3>
-        {% for item in data.education %}
-        <div class="item">
-            <div class="item-header">
-                <span class="title">{{ item.title }}</span>
-                <span class="date">{{ item.duration }}</span>
-            </div>
-            <span class="org">{{ item.organization }}</span>
-            <div class="description">{{ item.description | safe }}</div>
+    <div class="section-header">Education</div>
+    {% for item in data.education %}
+    <div class="item-block">
+        <table class="entry-table">
+            <tr>
+                <td class="entry-title">{{ item.title }}</td>
+                <td class="entry-date">{{ item.duration }}</td>
+            </tr>
+            <tr>
+                <td class="entry-org" colspan="2">{{ item.organization }}</td>
+            </tr>
+        </table>
+        {% if item.description %}
+        <div class="description">
+            {{ item.description | clean_pdf_html | safe }}
         </div>
-        {% endfor %}
-    </section>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Key Projects -->
+    {% if data.projects %}
+    <div class="section-header">Key Projects</div>
+    {% for p in data.projects if p.short_description and p.short_description != 'No description provided.' %}
+    <div class="item-block">
+        <table class="entry-table">
+            <tr>
+                <td class="entry-title">
+                    {{ p.title }}
+                    <span class="badge-status {{ 'status-completed' if p.status == 'completed' else 'status-ongoing' }}">
+                        {{ 'Completed' if p.status == 'completed' else 'In Progress' }}
+                    </span>
+                </td>
+                <td class="entry-date">
+                    {% if p.github_link %}
+                    <a href="{{ p.github_link }}">GitHub</a>
+                    {% endif %}
+                    {% if p.github_link and p.live_link %} | {% endif %}
+                    {% if p.live_link %}
+                    <a href="{{ p.live_link }}">Live Demo</a>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+        <div class="description">
+            {{ p.short_description | clean_pdf_html | safe }}
+            {% if p.full_content %}
+            <br>{{ p.full_content | clean_pdf_html | safe }}
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
     {% endif %}
     
-    {% if data.honors or data.papers %}
-    <section>
-        <h3>Honors & Publications</h3>
-        {% for item in data.honors %}
-        <div class="item">
-            <strong>🏆 {{ item.title }}</strong> - {{ item.organization }}
-            <span class="date">{{ item.duration }}</span>
+    <!-- Honors & Awards -->
+    {% if data.honors %}
+    <div class="section-header">Honors &amp; Awards</div>
+    {% for item in data.honors %}
+    <div class="item-block">
+        <table class="entry-table">
+            <tr>
+                <td class="entry-title">{{ item.title }}</td>
+                <td class="entry-date">{{ item.duration }}</td>
+            </tr>
+            <tr>
+                <td class="entry-org" colspan="2">{{ item.organization }}</td>
+            </tr>
+        </table>
+        {% if item.description %}
+        <div class="description">
+            {{ item.description | clean_pdf_html | safe }}
         </div>
-        {% endfor %}
-        {% for item in data.papers %}
-        <div class="item">
-            <strong>📄 {{ item.title }}</strong>
-            <div class="description">{{ item.description | striptags }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Publications -->
+    {% if data.papers %}
+    <div class="section-header">Publications</div>
+    {% for item in data.papers %}
+    <div class="item-block">
+        <table class="entry-table">
+            <tr>
+                <td class="entry-title">{{ item.title }}</td>
+                <td class="entry-date">{{ item.duration }}</td>
+            </tr>
+            {% if item.organization %}
+            <tr>
+                <td class="entry-org" colspan="2">{{ item.organization }}</td>
+            </tr>
+            {% endif %}
+        </table>
+        {% if item.description %}
+        <div class="description">
+            {{ item.description | clean_pdf_html | safe }}
         </div>
-        {% endfor %}
-    </section>
+        {% endif %}
+    </div>
+    {% endfor %}
     {% endif %}
 
 </body>

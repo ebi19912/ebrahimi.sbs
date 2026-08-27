@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitor Analytics & Traffic Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bs-body-bg: #f4f7f6;
+        }
+        body {
+            background-color: var(--bs-body-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #2c3e50;
+        }
+        .navbar-custom {
+            background-color: #212529;
+            padding: 15px 0;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            border: none;
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: #ffffff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+            overflow: hidden;
+            position: relative;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+        .stat-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+        }
+        .content-card {
+            border: none;
+            border-radius: 16px;
+            background: #ffffff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+        }
+        .table-responsive {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .table > :not(caption) > * > * {
+            padding: 0.85rem 1rem;
+            vertical-align: middle;
+        }
+        .badge-path {
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.85rem;
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: 500;
+        }
+        .badge-ip {
+            font-family: monospace;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+        .flag-emoji {
+            font-size: 1.25rem;
+            line-height: 1;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        .device-icon {
+            font-size: 1.1rem;
+            margin-right: 4px;
+        }
+        .pill-tab.active {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+        .progress-slim {
+            height: 6px;
+            border-radius: 3px;
+        }
+        .copy-btn {
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .copy-btn:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-dark navbar-custom shadow-sm sticky-top">
+        <div class="container">
+            <a href="{{ url_for('admin_dashboard') }}" class="navbar-brand mb-0 h1 fw-bold text-white d-flex align-items-center">
+                <i class="bi bi-graph-up-arrow me-2 text-primary"></i>
+                <span>Visitor Analytics</span>
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm fw-bold">
+                    <i class="bi bi-grid-fill me-1"></i> Dashboard
+                </a>
+                <a href="{{ url_for('export_analytics') }}" class="btn btn-success btn-sm fw-bold">
+                    <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+                </a>
+                <button type="button" class="btn btn-outline-danger btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#clearLogsModal">
+                    <i class="bi bi-trash3 me-1"></i> Clear Logs
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show rounded-4 mb-4" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Filter Bar & Time Range Selection -->
+        <div class="content-card p-3 mb-4">
+            <div class="row g-3 align-items-center justify-content-between">
+                <div class="col-12 col-md-auto d-flex flex-wrap gap-2 align-items-center">
+                    <span class="text-muted small fw-bold me-1"><i class="bi bi-calendar3 me-1"></i> Time Range:</span>
+                    <div class="btn-group btn-group-sm shadow-sm" role="group">
+                        <a href="{{ url_for('admin_analytics', range='today', search=search_query, bot=bot_filter) }}" 
+                           class="btn btn-outline-primary pill-tab {% if time_range == 'today' %}active{% endif %}">
+                           Today
+                        </a>
+                        <a href="{{ url_for('admin_analytics', range='7d', search=search_query, bot=bot_filter) }}" 
+                           class="btn btn-outline-primary pill-tab {% if time_range == '7d' %}active{% endif %}">
+                           Last 7 Days
+                        </a>
+                        <a href="{{ url_for('admin_analytics', range='30d', search=search_query, bot=bot_filter) }}" 
+                           class="btn btn-outline-primary pill-tab {% if time_range == '30d' %}active{% endif %}">
+                           Last 30 Days
+                        </a>
+                        <a href="{{ url_for('admin_analytics', range='all', search=search_query, bot=bot_filter) }}" 
+                           class="btn btn-outline-primary pill-tab {% if time_range == 'all' %}active{% endif %}">
+                           All Time
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-12 col-md-auto d-flex flex-wrap gap-2 align-items-center">
+                    <!-- Bot Filter -->
+                    <form method="GET" action="{{ url_for('admin_analytics') }}" class="d-flex gap-2 align-items-center">
+                        <input type="hidden" name="range" value="{{ time_range }}">
+                        
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-light"><i class="bi bi-robot"></i></span>
+                            <select name="bot" class="form-select form-select-sm" onchange="this.form.submit()">
+                                <option value="0" {% if bot_filter == '0' %}selected{% endif %}>Human Visitors Only</option>
+                                <option value="all" {% if bot_filter == 'all' %}selected{% endif %}>All Traffic (Human + Bots)</option>
+                                <option value="1" {% if bot_filter == '1' %}selected{% endif %}>Crawlers / Bots Only</option>
+                            </select>
+                        </div>
+
+                        <!-- Search -->
+                        <div class="input-group input-group-sm" style="min-width: 220px;">
+                            <input type="text" name="search" class="form-control" placeholder="Search IP, page, country..." value="{{ search_query }}">
+                            <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+                            {% if search_query %}
+                                <a href="{{ url_for('admin_analytics', range=time_range, bot=bot_filter) }}" class="btn btn-outline-secondary" title="Clear search">
+                                    <i class="bi bi-x-lg"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="row g-3 mb-4">
+            <!-- Total Pageviews -->
+            <div class="col-6 col-lg-3">
+                <div class="stat-card p-3 p-md-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-semibold text-uppercase">Total Pageviews</span>
+                            <h3 class="fw-bold mt-1 mb-0 text-dark">{{ "{:,}".format(all_time_views) }}</h3>
+                            <small class="text-muted" style="font-size: 0.78rem;">
+                                {% if time_range != 'all' %}Filtered: <span class="fw-bold text-primary">{{ "{:,}".format(filtered_views) }}</span>{% else %}All recorded hits{% endif %}
+                            </small>
+                        </div>
+                        <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                            <i class="bi bi-eye-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unique Visitors -->
+            <div class="col-6 col-lg-3">
+                <div class="stat-card p-3 p-md-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-semibold text-uppercase">Unique Visitors</span>
+                            <h3 class="fw-bold mt-1 mb-0 text-success">{{ "{:,}".format(all_time_unique) }}</h3>
+                            <small class="text-muted" style="font-size: 0.78rem;">
+                                {% if time_range != 'all' %}Filtered: <span class="fw-bold text-success">{{ "{:,}".format(filtered_unique) }}</span>{% else %}Distinct IP & Devices{% endif %}
+                            </small>
+                        </div>
+                        <div class="stat-icon bg-success bg-opacity-10 text-success">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Pageviews -->
+            <div class="col-6 col-lg-3">
+                <div class="stat-card p-3 p-md-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-semibold text-uppercase">Today's Views</span>
+                            <h3 class="fw-bold mt-1 mb-0 text-warning">{{ "{:,}".format(today_views) }}</h3>
+                            <small class="text-muted" style="font-size: 0.78rem;">Since 00:00 UTC</small>
+                        </div>
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                            <i class="bi bi-calendar-event-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Unique Visitors -->
+            <div class="col-6 col-lg-3">
+                <div class="stat-card p-3 p-md-4">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-muted small fw-semibold text-uppercase">Today's Uniques</span>
+                            <h3 class="fw-bold mt-1 mb-0 text-info">{{ "{:,}".format(today_unique) }}</h3>
+                            <small class="text-muted" style="font-size: 0.78rem;">Distinct visitors today</small>
+                        </div>
+                        <div class="stat-icon bg-info bg-opacity-10 text-info">
+                            <i class="bi bi-person-check-fill"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section: Traffic Trend & Referrers -->
+        <div class="row g-4 mb-4">
+            <!-- Timeline Chart -->
+            <div class="col-12 col-xl-8">
+                <div class="content-card p-4 h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-graph-up text-primary me-2"></i>
+                            Traffic Trend Over Time
+                        </h6>
+                        <span class="badge bg-light text-secondary border">
+                            {% if time_range == 'today' %}Hourly{% else %}Daily{% endif %}
+                        </span>
+                    </div>
+                    <div style="position: relative; height: 280px;">
+                        <canvas id="trafficTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referrers Doughnut Chart -->
+            <div class="col-12 col-xl-4">
+                <div class="content-card p-4 h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-signpost-split-fill text-warning me-2"></i>
+                            Traffic Sources & Referrers
+                        </h6>
+                    </div>
+                    <div style="position: relative; height: 240px;">
+                        <canvas id="referrerChart"></canvas>
+                    </div>
+                    <div class="text-center mt-2">
+                        <small class="text-muted" style="font-size: 0.75rem;">Where visitors discovered your portfolio</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Section: Top Pages, Top Countries, Device Breakdown -->
+        <div class="row g-4 mb-4">
+            <!-- Top Visited Pages -->
+            <div class="col-12 col-lg-4">
+                <div class="content-card p-4 h-100">
+                    <h6 class="fw-bold mb-3 text-dark d-flex align-items-center">
+                        <i class="bi bi-file-earmark-text-fill text-primary me-2"></i>
+                        Top Visited Pages
+                    </h6>
+                    {% if top_pages %}
+                        <div class="d-flex flex-column gap-3">
+                            {% set max_page_count = top_pages[0].count if top_pages else 1 %}
+                            {% for page in top_pages %}
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <div class="text-truncate me-2" style="max-width: 210px;" title="{{ page.path }}">
+                                            <span class="badge badge-path text-dark border">{{ page.path }}</span>
+                                            {% if page.page_title and page.page_title != page.path %}
+                                                <small class="text-muted d-block text-truncate" style="font-size: 0.75rem;">{{ page.page_title }}</small>
+                                            {% endif %}
+                                        </div>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary fw-bold">{{ page.count }} views</span>
+                                    </div>
+                                    <div class="progress progress-slim bg-light">
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ (page.count / max_page_count * 100)|round }}%;"></div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+                            <small>No page visits recorded in this period.</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Top Countries & Geolocation -->
+            <div class="col-12 col-lg-4">
+                <div class="content-card p-4 h-100">
+                    <h6 class="fw-bold mb-3 text-dark d-flex align-items-center">
+                        <i class="bi bi-globe2 text-success me-2"></i>
+                        Top Visitor Locations
+                    </h6>
+                    {% if top_countries %}
+                        <div class="d-flex flex-column gap-3">
+                            {% set max_country_count = top_countries[0].count if top_countries else 1 %}
+                            {% for country in top_countries %}
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <div class="d-flex align-items-center">
+                                            <span class="flag-emoji">{{ country.country_code|flag }}</span>
+                                            <span class="fw-medium text-dark">{{ country.country }}</span>
+                                            {% if country.country_code and country.country_code != 'XX' %}
+                                                <small class="text-muted ms-1">({{ country.country_code }})</small>
+                                            {% endif %}
+                                        </div>
+                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold">{{ country.count }} visits</span>
+                                    </div>
+                                    <div class="progress progress-slim bg-light">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (country.count / max_country_count * 100)|round }}%;"></div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-geo-alt fs-2 d-block mb-2 text-secondary"></i>
+                            <small>No location data recorded yet.</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Devices, OS & Browsers Breakdown -->
+            <div class="col-12 col-lg-4">
+                <div class="content-card p-4 h-100">
+                    <h6 class="fw-bold mb-3 text-dark d-flex align-items-center">
+                        <i class="bi bi-laptop text-info me-2"></i>
+                        Devices & Systems
+                    </h6>
+                    <div style="position: relative; height: 180px;">
+                        <canvas id="deviceChart"></canvas>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <div class="row g-2 text-center">
+                        <div class="col-6">
+                            <span class="text-muted small d-block mb-1 fw-semibold">Top Browsers</span>
+                            <div class="d-flex flex-column gap-1">
+                                {% for b in browser_counts[:3] %}
+                                    <div class="d-flex justify-content-between small px-2 py-1 bg-light rounded">
+                                        <span>{{ b.browser }}</span>
+                                        <span class="fw-bold text-secondary">{{ b.count }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted small d-block mb-1 fw-semibold">Top Platforms</span>
+                            <div class="d-flex flex-column gap-1">
+                                {% for o in os_counts[:3] %}
+                                    <div class="d-flex justify-content-between small px-2 py-1 bg-light rounded">
+                                        <span>{{ o.os }}</span>
+                                        <span class="fw-bold text-secondary">{{ o.count }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Real-time Visit Logs Table -->
+        <div class="content-card p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-list-columns-reverse text-primary me-2"></i>
+                        Detailed Visitor Logs
+                    </h5>
+                    <small class="text-muted">Showing {{ visits|length }} of {{ pagination.total }} records</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-dark border">
+                        <i class="bi bi-clock me-1"></i> Real-time tracking
+                    </span>
+                    <a href="{{ url_for('admin_analytics', range=time_range, search=search_query, bot=bot_filter) }}" class="btn btn-outline-secondary btn-sm" title="Refresh list">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </a>
+                </div>
+            </div>
+
+            {% if visits %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 140px;">Time</th>
+                                <th style="width: 150px;">IP Address</th>
+                                <th>Location & ISP</th>
+                                <th>Page Visited</th>
+                                <th>Entry Link / Referrer</th>
+                                <th>Device & Browser</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for v in visits %}
+                                <tr>
+                                    <!-- Time -->
+                                    <td>
+                                        <div class="fw-semibold small text-dark">{{ v.timestamp|time_ago }}</div>
+                                        <div class="text-muted" style="font-size: 0.72rem;">{{ v.timestamp|datetime }}</div>
+                                    </td>
+
+                                    <!-- IP Address -->
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-light text-dark border badge-ip">{{ v.ip_address }}</span>
+                                            <i class="bi bi-clipboard ms-1 copy-btn text-muted small" onclick="copyToClipboard('{{ v.ip_address }}')" title="Copy IP"></i>
+                                        </div>
+                                        {% if v.is_bot %}
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle mt-1" style="font-size: 0.65rem;">
+                                                <i class="bi bi-robot"></i> Bot / Crawler
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Location & ISP -->
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="flag-emoji">{{ v.country_code|flag }}</span>
+                                            <div>
+                                                <span class="fw-medium text-dark">{{ v.country }}</span>
+                                                {% if v.city and v.city != 'Unknown' %}
+                                                    <span class="text-muted small">, {{ v.city }}</span>
+                                                {% endif %}
+                                                {% if v.isp %}
+                                                    <div class="text-muted text-truncate" style="font-size: 0.72rem; max-width: 180px;" title="{{ v.isp }}">
+                                                        <i class="bi bi-hdd-network me-1"></i>{{ v.isp }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Page Visited -->
+                                    <td>
+                                        <span class="badge badge-path border">{{ v.path }}</span>
+                                        {% if v.page_title and v.page_title != v.path %}
+                                            <div class="text-muted small mt-1" style="font-size: 0.75rem;">{{ v.page_title }}</div>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Referrer -->
+                                    <td>
+                                        {% if v.referrer_domain == 'Direct' or v.referrer_domain == 'Direct / Bookmark' or not v.referrer_domain %}
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border">Direct / Bookmark</span>
+                                        {% else %}
+                                            <div class="d-flex align-items-center">
+                                                <span class="badge bg-warning bg-opacity-10 text-dark border border-warning-subtle me-1">
+                                                    {{ v.referrer_domain }}
+                                                </span>
+                                                {% if v.referrer and v.referrer.startswith('http') %}
+                                                    <a href="{{ v.referrer }}" target="_blank" class="text-muted small" title="{{ v.referrer }}">
+                                                        <i class="bi bi-box-arrow-up-right"></i>
+                                                    </a>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Device / Browser / OS -->
+                                    <td>
+                                        <div class="d-flex align-items-center small">
+                                            {% if v.device_type == 'Mobile' %}
+                                                <i class="bi bi-phone device-icon text-primary" title="Mobile"></i>
+                                            {% elif v.device_type == 'Tablet' %}
+                                                <i class="bi bi-tablet device-icon text-info" title="Tablet"></i>
+                                            {% elif v.device_type == 'Bot' %}
+                                                <i class="bi bi-robot device-icon text-danger" title="Bot"></i>
+                                            {% else %}
+                                                <i class="bi bi-display device-icon text-success" title="Desktop"></i>
+                                            {% endif %}
+                                            <span class="fw-medium">{{ v.browser }}</span>
+                                            <span class="text-muted ms-1">on {{ v.os }}</span>
+                                        </div>
+                                        <div class="text-muted text-truncate" style="font-size: 0.68rem; max-width: 220px;" title="{{ v.user_agent }}">
+                                            {{ v.user_agent }}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if pagination.pages > 1 %}
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <small class="text-muted">
+                            Page {{ pagination.page }} of {{ pagination.pages }}
+                        </small>
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination pagination-sm mb-0">
+                                {% if pagination.has_prev %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin_analytics', page=pagination.prev_num, range=time_range, search=search_query, bot=bot_filter) }}">
+                                            &laquo; Prev
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">&laquo; Prev</span></li>
+                                {% endif %}
+
+                                {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                    {% if p %}
+                                        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                                            <a class="page-link" href="{{ url_for('admin_analytics', page=p, range=time_range, search=search_query, bot=bot_filter) }}">{{ p }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">…</span></li>
+                                    {% endif %}
+                                {% endfor %}
+
+                                {% if pagination.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('admin_analytics', page=pagination.next_num, range=time_range, search=search_query, bot=bot_filter) }}">
+                                            Next &raquo;
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                {% endif %}
+
+            {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-search fs-1 d-block mb-3 text-secondary"></i>
+                    <h5>No visit logs found</h5>
+                    <p class="small">Try changing your search keywords or switching time range to "All Time".</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Modal: Clear Logs Confirmation -->
+    <div class="modal fade" id="clearLogsModal" tabindex="-1" aria-labelledby="clearLogsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold" id="clearLogsModalLabel">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> Clear Analytics Logs
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <p class="mb-3 text-dark fw-medium">Are you sure you want to permanently delete all recorded visitor logs?</p>
+                    <p class="text-muted small">This action cannot be undone. You can export a CSV backup beforehand if needed.</p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancel</button>
+                    <form method="POST" action="{{ url_for('clear_analytics') }}">
+                        <button type="submit" class="btn btn-danger px-4 fw-bold">
+                            <i class="bi bi-trash3 me-1"></i> Yes, Delete All Logs
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Chart.js Render Script -->
+    <script>
+        // Copy to clipboard helper
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const toast = document.createElement('div');
+                toast.className = 'position-fixed bottom-0 end-0 p-3';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = `
+                    <div class="toast show align-items-center text-white bg-dark border-0 shadow" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body"><i class="bi bi-check-circle-fill text-success me-2"></i> IP copied: <code>${text}</code></div>
+                        </div>
+                    </div>`;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            });
+        }
+
+        // 1. Traffic Trend Line Chart
+        const chartLabels = {{ chart_labels|safe }};
+        const chartViews = {{ chart_views|safe }};
+        const chartUniques = {{ chart_uniques|safe }};
+
+        const ctxTraffic = document.getElementById('trafficTrendChart').getContext('2d');
+        const gradientViews = ctxTraffic.createLinearGradient(0, 0, 0, 260);
+        gradientViews.addColorStop(0, 'rgba(13, 110, 253, 0.25)');
+        gradientViews.addColorStop(1, 'rgba(13, 110, 253, 0.00)');
+
+        const gradientUniques = ctxTraffic.createLinearGradient(0, 0, 0, 260);
+        gradientUniques.addColorStop(0, 'rgba(25, 135, 84, 0.25)');
+        gradientUniques.addColorStop(1, 'rgba(25, 135, 84, 0.00)');
+
+        new Chart(ctxTraffic, {
+            type: 'line',
+            data: {
+                labels: chartLabels,
+                datasets: [
+                    {
+                        label: 'Pageviews',
+                        data: chartViews,
+                        borderColor: '#0d6efd',
+                        backgroundColor: gradientViews,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Unique Visitors',
+                        data: chartUniques,
+                        borderColor: '#198754',
+                        backgroundColor: gradientUniques,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { boxWidth: 12, usePointStyle: true }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, precision: 0 }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+
+        // 2. Referrers Doughnut Chart
+        const refLabels = [{% for r in top_referrers %}'{{ r.referrer_domain }}',{% endfor %}];
+        const refData = [{% for r in top_referrers %}{{ r.count }},{% endfor %}];
+        const ctxRef = document.getElementById('referrerChart').getContext('2d');
+
+        if (refLabels.length === 0) {
+            refLabels.push('No data');
+            refData.push(1);
+        }
+
+        new Chart(ctxRef, {
+            type: 'doughnut',
+            data: {
+                labels: refLabels,
+                datasets: [{
+                    data: refData,
+                    backgroundColor: [
+                        '#0d6efd', '#ffc107', '#198754', '#0dcaf0', 
+                        '#6f42c1', '#fd7e14', '#d63384', '#6c757d'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, font: { size: 11 }, padding: 8 }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+
+        // 3. Device Breakdown Doughnut Chart
+        const devLabels = [{% for d in device_counts %}'{{ d.device_type }}',{% endfor %}];
+        const devData = [{% for d in device_counts %}{{ d.count }},{% endfor %}];
+        const ctxDev = document.getElementById('deviceChart').getContext('2d');
+
+        if (devLabels.length === 0) {
+            devLabels.push('No data');
+            devData.push(1);
+        }
+
+        new Chart(ctxDev, {
+            type: 'doughnut',
+            data: {
+                labels: devLabels,
+                datasets: [{
+                    data: devData,
+                    backgroundColor: ['#0d6efd', '#20c997', '#ffc107', '#dc3545'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, font: { size: 11 }, padding: 6 }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    </script>
+</body>
+</html>

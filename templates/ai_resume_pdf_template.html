@@ -2,81 +2,234 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>{{ data.full_name }} - Resume</title>
     <style>
-        @page { size: A4; margin: 1.5cm; }
-        body { font-family: Helvetica, sans-serif; color: #333; line-height: 1.5; }
-        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-        h1 { margin: 0; font-size: 24pt; text-transform: uppercase; }
-        .contact { font-size: 10pt; color: #555; margin-top: 5px; }
-        
-        h3 { 
-            background-color: #f0f0f0; 
-            padding: 5px; 
-            border-left: 5px solid #333; 
-            margin-top: 20px; 
-            font-size: 14pt; 
-            text-transform: uppercase;
+        @page {
+            size: A4;
+            margin: 1.2cm 1.4cm 1.2cm 1.4cm;
         }
         
-        .job-title { font-weight: bold; font-size: 12pt; margin-top: 10px; }
-        .job-meta { font-style: italic; font-size: 10pt; margin-bottom: 5px; }
-        .description { font-size: 10pt; text-align: justify; white-space: pre-line; }
-        
-        .skills-container { margin-top: 10px; }
-        .skill-item { display: inline-block; background: #eee; padding: 3px 8px; margin: 2px; border-radius: 4px; font-size: 9pt; }
-        .project-item { margin-bottom: 10px; font-size: 10pt; }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            line-height: 1.35;
+            font-size: 9.5pt;
+        }
+
+        /* --- Header Section --- */
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1.5px solid #0f172a;
+        }
+
+        .name {
+            font-size: 20pt;
+            font-weight: bold;
+            color: #0f172a;
+            letter-spacing: 0.5px;
+            margin: 0 0 3px 0;
+            text-transform: uppercase;
+        }
+
+        .contact-bar {
+            font-size: 8.5pt;
+            color: #475569;
+            line-height: 1.4;
+        }
+
+        .contact-bar a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .separator {
+            color: #94a3b8;
+            padding: 0 4px;
+        }
+
+        /* --- Section Titles --- */
+        .section-header {
+            font-size: 10pt;
+            font-weight: bold;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            border-bottom: 1.2px solid #2563eb;
+            padding-bottom: 2px;
+            margin-top: 10px;
+            margin-bottom: 6px;
+        }
+
+        /* --- Entry Table Layout (ATS friendly) --- */
+        .entry-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1px;
+        }
+
+        .entry-table td {
+            padding: 0;
+            vertical-align: top;
+        }
+
+        .entry-title {
+            font-size: 9.5pt;
+            font-weight: bold;
+            color: #0f172a;
+            text-align: left;
+        }
+
+        .entry-date {
+            font-size: 8.5pt;
+            font-weight: bold;
+            color: #475569;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .entry-org {
+            font-size: 9pt;
+            font-style: italic;
+            color: #334155;
+            text-align: left;
+        }
+
+        /* --- Content & Lists --- */
+        .summary-text {
+            font-size: 9pt;
+            color: #334155;
+            text-align: justify;
+            line-height: 1.35;
+            margin-bottom: 4px;
+        }
+
+        .item-block {
+            margin-bottom: 8px;
+            page-break-inside: avoid;
+        }
+
+        .description {
+            font-size: 9pt;
+            color: #334155;
+            margin-top: 2px;
+            line-height: 1.35;
+        }
+
+        .description ul {
+            margin: 2px 0 3px 14px;
+            padding: 0;
+        }
+
+        .description li {
+            margin-bottom: 2px;
+        }
+
+        .description p {
+            margin: 2px 0;
+        }
+
+        /* --- Skills Grid Table --- */
+        .skills-grid-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2px;
+            margin-bottom: 4px;
+        }
+
+        .skills-grid-table td {
+            padding: 2px 4px;
+            vertical-align: middle;
+            font-size: 8.5pt;
+            color: #1e293b;
+        }
+
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
 
+    <!-- Header Section -->
     <div class="header">
-        <h1>{{ data.full_name }}</h1>
-        <div class="contact">
-            {% if data.email and data.show_email %}{{ data.email }} | {% endif %}
-            {% if data.mobile and data.show_mobile %}{{ data.mobile }} | {% endif %}
-            {{ request.host_url.rstrip('/') }}
-            {% if data.linkedin and data.show_linkedin %}<br>LinkedIn: {{ data.linkedin }}{% endif %}
-            {% if data.github and data.show_github %} | GitHub: {{ data.github }}{% endif %}
-            {% if data.address %}<br>{{ data.address }}{% endif %}
+        <h1 class="name">{{ data.full_name }}</h1>
+        <div class="contact-bar">
+            {% if data.address %}{{ data.address }}{% endif %}
+            {% if data.email and data.show_email %}<span class="separator">|</span><a href="mailto:{{ data.email }}">{{ data.email }}</a>{% endif %}
+            {% if data.mobile and data.show_mobile %}<span class="separator">|</span>{{ data.mobile }}{% endif %}
+            {% if data.linkedin and data.show_linkedin %}<span class="separator">|</span><a href="{{ data.linkedin }}">{{ data.linkedin | clean_url }}</a>{% endif %}
+            {% if data.github and data.show_github %}<span class="separator">|</span><a href="{{ data.github }}">{{ data.github | clean_url }}</a>{% endif %}
+            {% if request and request.host_url %}<span class="separator">|</span><a href="{{ request.host_url }}">{{ request.host_url | clean_url }}</a>{% endif %}
         </div>
     </div>
 
-    <section>
-        <h3>Professional Summary</h3>
-        <div class="description">{{ data.summary }}</div>
-    </section>
+    <!-- Professional Summary -->
+    {% if data.summary %}
+    <div class="section-header">Professional Summary</div>
+    <div class="summary-text">
+        {{ data.summary | clean_pdf_html | safe }}
+    </div>
+    {% endif %}
 
-    <section>
-        <h3>Core Skills</h3>
-        <div class="skills-container">
-            {% for skill in data.skills %}
-                <span class="skill-item">{{ skill }}</span>
+    <!-- Core Skills -->
+    {% if data.skills %}
+    <div class="section-header">Core Skills</div>
+    <table class="skills-grid-table">
+        {% for row in data.skills | batch(2) %}
+        <tr>
+            {% for s in row %}
+            <td width="50%">
+                &bull; <strong>{{ s }}</strong>
+            </td>
             {% endfor %}
-        </div>
-    </section>
-
-    <section>
-        <h3>Professional Experience</h3>
-        {% for job in data.experience %}
-        <div style="margin-bottom: 15px;">
-            <div class="job-title">{{ job.title }}</div>
-            <div class="job-meta">{{ job.company }} | {{ job.date }}</div>
-            <div class="description">
-                {{ job.description }}
-            </div>
-        </div>
+            {% if row | length == 1 %}
+            <td width="50%"></td>
+            {% endif %}
+        </tr>
         {% endfor %}
-    </section>
+    </table>
+    {% endif %}
 
+    <!-- Professional Experience -->
+    {% if data.experience %}
+    <div class="section-header">Professional Experience</div>
+    {% for job in data.experience %}
+    <div class="item-block">
+        <table class="entry-table">
+            <tr>
+                <td class="entry-title">{{ job.title }}</td>
+                <td class="entry-date">{{ job.date }}</td>
+            </tr>
+            <tr>
+                <td class="entry-org" colspan="2">{{ job.company }}</td>
+            </tr>
+        </table>
+        <div class="description">
+            {{ job.description | clean_pdf_html | safe }}
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Relevant Projects -->
     {% if data.projects %}
-    <section>
-        <h3>Relevant Projects</h3>
-        {% for proj in data.projects %}
-        <div class="project-item">
-            <strong>{{ proj.title }} ({{ proj.status }}):</strong> {{ proj.description }}
+    <div class="section-header">Relevant Projects</div>
+    {% for proj in data.projects %}
+    <div class="item-block">
+        <table class="entry-table">
+            <tr>
+                <td class="entry-title">{{ proj.title }} {% if proj.status %}({{ proj.status }}){% endif %}</td>
+                <td class="entry-date"></td>
+            </tr>
+        </table>
+        <div class="description">
+            {{ proj.description | clean_pdf_html | safe }}
         </div>
-        {% endfor %}
-    </section>
+    </div>
+    {% endfor %}
     {% endif %}
 
 </body>

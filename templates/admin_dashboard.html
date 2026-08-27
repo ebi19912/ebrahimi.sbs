@@ -38,6 +38,9 @@
         <div class="container">
             <span class="navbar-brand mb-0 h1 fw-bold"><i class="bi bi-shield-lock"></i> Admin Panel</span>
             <div>
+                <a href="{{ url_for('admin_analytics') }}" class="btn btn-primary btn-sm me-2 fw-bold">
+                    <i class="bi bi-graph-up-arrow"></i> Analytics
+                </a>
                 <a href="{{ url_for('admin_account') }}" class="btn btn-warning btn-sm me-2 fw-bold">
                     <i class="bi bi-gear-fill"></i> Settings
                 </a>
@@ -52,7 +55,7 @@
         <div class="row mb-5">
             <div class="col-12 text-center text-md-start">
                 <h2 class="fw-bold text-dark">Portfolio Management Dashboard</h2>
-                <p class="text-muted">Welcome, modify your content and AI settings below.</p>
+                <p class="text-muted">Welcome, modify your content, monitor visitor analytics, and manage AI settings below.</p>
             </div>
         </div>
 
@@ -76,11 +79,21 @@
 
         <div class="row g-4 text-center">
             <div class="col-md-4">
+                <a href="{{ url_for('admin_analytics') }}" class="text-decoration-none text-dark">
+                    <div class="card shadow-sm card-box p-4 border border-primary-subtle" style="background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);">
+                        <i class="bi bi-graph-up-arrow icon-big text-primary"></i>
+                        <h5 class="fw-bold">Visitor Analytics</h5>
+                        <p class="small text-muted mb-0">Traffic, IPs, Geo & Referrers</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4">
                 <a href="{{ url_for('edit_profile') }}" class="text-decoration-none text-dark">
                     <div class="card shadow-sm card-box p-4">
                         <i class="bi bi-person-bounding-box icon-big text-primary"></i>
                         <h5 class="fw-bold">Profile</h5>
-                        <p class="small text-muted">Update bio & photo</p>
+                        <p class="small text-muted mb-0">Update bio & photo</p>
                     </div>
                 </a>
             </div>
@@ -90,7 +103,7 @@
                     <div class="card shadow-sm card-box p-4">
                         <i class="bi bi-grid-1x2-fill icon-big text-success"></i>
                         <h5 class="fw-bold">Projects</h5>
-                        <p class="small text-muted">Showcase your work</p>
+                        <p class="small text-muted mb-0">Showcase your work</p>
                     </div>
                 </a>
             </div>
@@ -100,7 +113,7 @@
                     <div class="card shadow-sm card-box p-4">
                         <i class="bi bi-mortarboard-fill icon-big text-warning"></i>
                         <h5 class="fw-bold">Resume</h5>
-                        <p class="small text-muted">Exp & Education</p>
+                        <p class="small text-muted mb-0">Exp & Education</p>
                     </div>
                 </a>
             </div>
@@ -110,7 +123,7 @@
                     <div class="card shadow-sm card-box p-4">
                         <i class="bi bi-lightning-charge-fill icon-big text-info"></i>
                         <h5 class="fw-bold">Skills</h5>
-                        <p class="small text-muted">Technical abilities</p>
+                        <p class="small text-muted mb-0">Technical abilities</p>
                     </div>
                 </a>
             </div>
@@ -120,7 +133,17 @@
                     <div class="card shadow-sm card-box p-4">
                         <i class="bi bi-display icon-big text-danger"></i>
                         <h5 class="fw-bold">Website Demos</h5>
-                        <p class="small text-muted">Upload & Manage Demos</p>
+                        <p class="small text-muted mb-0">Upload & Manage Demos</p>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-4">
+                <a href="{{ url_for('admin_resume_templates') }}" class="text-decoration-none text-dark">
+                    <div class="card shadow-sm card-box p-4 border border-primary-subtle" style="background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);">
+                        <i class="bi bi-palette-fill icon-big text-primary"></i>
+                        <h5 class="fw-bold">Resume Templates 🎨</h5>
+                        <p class="small text-muted mb-0">Preview & Choose Active Theme</p>
                     </div>
                 </a>
             </div>

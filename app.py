@@ -2,6 +2,13 @@ import os
 import json
 import random
 import threading
+import io
+import csv
+import hashlib
+import urllib.parse
+import datetime
+import html
+import re
 from io import BytesIO
 from flask import Flask, render_template, request, redirect, url_for, flash, make_response, session, jsonify, send_from_directory
 from flask_bcrypt import Bcrypt
@@ -13,9 +20,10 @@ from dotenv import load_dotenv
 import zipfile
 import shutil
 import time
+from sqlalchemy import func, desc, distinct, or_
 
 # Import your database models
-from models import db, Admin, Project, ResumeItem, Skill, Profile, AISettings, DemoSite
+from models import db, Admin, Project, ResumeItem, Skill, Profile, AISettings, DemoSite, PageVisit
 
 # Import RAG utilities
 from rag_utils import initialize_vector_db, get_relevant_context
@@ -44,8 +52,470 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message = "Please log in to access this page."
 
-# --- AI Client Configuration ---
-# AI Configuration is now loaded dynamically from the AISettings model in the database.
+with app.app_context():
+    db.create_all()
+    # Safe auto-migration for SQLite schema updates
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            result = conn.execute(text("PRAGMA table_info(profile)"))
+            cols = [row[1] for row in result.fetchall()]
+            if 'resume_template' not in cols:
+                conn.execute(text("ALTER TABLE profile ADD COLUMN resume_template VARCHAR(50) DEFAULT 'modern'"))
+                conn.commit()
+    except Exception as e:
+        pass
+
+# --- Jinja Template Filters & Helpers ---
+def country_code_to_flag(code):
+    """Converts a 2-letter ISO country code into a flag emoji."""
+    if not code or len(code) != 2 or code in ('XX', 'LAN'):
+        return '🌐'
+    try:
+        return chr(ord(code[0].upper()) + 127397) + chr(ord(code[1].upper()) + 127397)
+    except Exception:
+        return '🌐'
+
+def format_datetime(dt):
+    if not dt:
+        return ''
+    return dt.strftime('%Y-%m-%d %H:%M:%S')
+
+def time_ago(dt):
+    if not dt:
+        return ''
+    now = datetime.datetime.utcnow()
+    diff = now - dt
+    seconds = int(diff.total_seconds())
+    if seconds < 60:
+        return 'Just now'
+    elif seconds < 3600:
+        mins = seconds // 60
+        return f'{mins}m ago'
+    elif seconds < 86400:
+        hours = seconds // 3600
+        return f'{hours}h ago'
+    else:
+        days = seconds // 86400
+        return f'{days}d ago'
+
+def clean_pdf_html(content):
+    """
+    Sanitizes and normalizes HTML/Text for flawless xhtml2pdf rendering and ATS parsing.
+    Converts typographic Unicode characters to safe ASCII equivalents, removes broken nested tags,
+    and strips out unsupported characters and emojis.
+    """
+    if not content:
+        return ""
+    text = html.unescape(str(content))
+    # Replace unicode typographic dashes and quotes with ASCII equivalents
+    text = text.replace('\u2014', ' - ') # em-dash
+    text = text.replace('\u2013', '-')   # en-dash
+    text = text.replace('\u2012', '-')
+    text = text.replace('\u2015', ' - ')
+    text = text.replace('\u2018', "'")   # left single quote
+    text = text.replace('\u2019', "'")   # right single quote
+    text = text.replace('\u201c', '"')   # left double quote
+    text = text.replace('\u201d', '"')   # right double quote
+    text = text.replace('\u00a0', ' ')   # non-breaking space
+    text = text.replace('\u2022', '-')   # bullet
+    text = text.replace('\u2026', '...') # ellipsis
+    
+    # Strip emojis that crash/corrupt PDF generation in Helvetica/Type1
+    emoji_pattern = re.compile(
+        "["
+        "\U00010000-\U0010ffff"
+        "\U00002600-\U000027bf"
+        "\U00002300-\U000023ff"
+        "\U00002b50-\U00002b55"
+        "\U0000fe00-\U0000fe0f"
+        "]+",
+        flags=re.UNICODE
+    )
+    text = emoji_pattern.sub("", text)
+    
+    # Clean up HTML tags: remove <p> inside <li>
+    text = re.sub(r'<li>\s*<p[^>]*>(.*?)</p>\s*</li>', r'<li>\1</li>', text, flags=re.DOTALL | re.IGNORECASE)
+    # Remove useless spans / cite tags
+    text = re.sub(r'<\/?span[^>]*>', '', text, flags=re.IGNORECASE)
+    
+    # Strip unnecessary attributes except href on <a>
+    def clean_tag(match):
+        tag = match.group(1).lower()
+        if tag == 'a':
+            href_m = re.search(r'href=[\'"]([^\'"]*)[\'"]', match.group(0), re.IGNORECASE)
+            if href_m:
+                return f'<a href="{href_m.group(1)}">'
+            return '<a>'
+        return f'<{tag}>'
+    
+    text = re.sub(r'<([a-zA-Z0-9]+)\s+[^>]*>', clean_tag, text)
+    text = re.sub(r'\s+', ' ', text)
+    text = re.sub(r'>\s+<', '><', text)
+    return text.strip()
+
+def clean_url(url):
+    """Strips https://, http://, and www. for clean visual display in resumes."""
+    if not url:
+        return ""
+    u = str(url).strip()
+    u = re.sub(r'^https?://', '', u)
+    u = re.sub(r'^www\.', '', u)
+    return u.rstrip('/')
+
+app.jinja_env.filters['flag'] = country_code_to_flag
+app.jinja_env.filters['datetime'] = format_datetime
+app.jinja_env.filters['time_ago'] = time_ago
+app.jinja_env.filters['clean_pdf_html'] = clean_pdf_html
+app.jinja_env.filters['clean_url'] = clean_url
+
+# --- Resume Templates Registry ---
+RESUME_TEMPLATES = {
+    'modern': {
+        'id': 'modern',
+        'name': 'Executive Modern',
+        'style_tag': 'Cobalt & Slate',
+        'theme_color': '#2563eb',
+        'description': 'Balanced modern tech layout with cobalt accents, dual-column skills, and clean status tags.',
+        'features': ['100% ATS Optimized', 'Cobalt Accent Bars', 'Dual-Column Skills', 'Clean Status Badges'],
+        'preview_image': 'preview_modern.png',
+        'template_file': 'pdf_templates/template_modern.html'
+    },
+    'minimal': {
+        'id': 'minimal',
+        'name': 'Silicon Valley Minimal',
+        'style_tag': 'Monochrome Clean',
+        'theme_color': '#111827',
+        'description': 'Ultra-clean, high-density monochrome layout with right-aligned contact card preferred by top tech giants.',
+        'features': ['100% ATS Optimized', 'Left-Aligned Header', 'Stacked Contact Card', 'High-Density Spacing'],
+        'preview_image': 'preview_minimal.png',
+        'template_file': 'pdf_templates/template_minimal.html'
+    },
+    'emerald': {
+        'id': 'emerald',
+        'name': 'Nordic Emerald',
+        'style_tag': 'Teal & Fresh Modern',
+        'theme_color': '#0f766e',
+        'description': 'Fresh contemporary style with Nordic teal accent bars and modern pill headers for cutting-edge platforms.',
+        'features': ['100% ATS Optimized', 'Teal Highlight Banners', 'Fresh Startup Aesthetic', 'Distinct Section Markers'],
+        'preview_image': 'preview_emerald.png',
+        'template_file': 'pdf_templates/template_emerald.html'
+    },
+    'ivy': {
+        'id': 'ivy',
+        'name': 'Ivy League Academic',
+        'style_tag': 'Crimson & Formal',
+        'theme_color': '#881337',
+        'description': 'Distinguished academic styling with crimson double rules, placing Education and Publications at the forefront.',
+        'features': ['100% ATS Optimized', 'Crimson Double Rules', 'Academic/Research Priority', 'Refined Typography'],
+        'preview_image': 'preview_ivy.png',
+        'template_file': 'pdf_templates/template_ivy.html'
+    }
+}
+
+# --- Geolocation & Tracking Helpers ---
+GEO_CACHE = {}  # In-memory IP geo cache: ip -> {country, country_code, city, isp}
+
+def is_private_ip(ip):
+    if not ip:
+        return True
+    if ip in ('127.0.0.1', '::1', 'localhost', 'testclient'):
+        return True
+    if ip.startswith(('192.168.', '10.', '172.16.', '172.17.', '172.18.', '172.19.', 
+                      '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', 
+                      '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.')):
+        return True
+    return False
+
+def get_client_ip():
+    """Extracts client IP behind Cloudflare, Nginx, or direct connection."""
+    # 1. Cloudflare header
+    cf_ip = request.headers.get('CF-Connecting-IP')
+    if cf_ip:
+        return cf_ip.strip()
+    
+    # 2. X-Forwarded-For
+    xff = request.headers.get('X-Forwarded-For')
+    if xff:
+        return xff.split(',')[0].strip()
+        
+    # 3. X-Real-IP
+    x_real = request.headers.get('X-Real-IP')
+    if x_real:
+        return x_real.strip()
+        
+    return request.remote_addr or '127.0.0.1'
+
+def parse_user_agent(ua_string):
+    if not ua_string:
+        return {'device': 'Unknown', 'os': 'Unknown', 'browser': 'Unknown', 'is_bot': False}
+    
+    ua_lower = ua_string.lower()
+    
+    # Bot detection
+    bots = ['googlebot', 'bingbot', 'yandex', 'baiduspider', 'duckduckbot', 'slurp', 
+            'twitterbot', 'facebookexternalhit', 'linkedinbot', 'telegrambot', 'applebot', 
+            'semrushbot', 'ahrefsbot', 'dotbot', 'mj12bot', 'crawler', 'spider', 'robot', 'bot/']
+    is_bot = any(b in ua_lower for b in bots)
+    
+    # Device
+    if is_bot:
+        device = 'Bot'
+    elif 'ipad' in ua_lower or 'tablet' in ua_lower:
+        device = 'Tablet'
+    elif any(m in ua_lower for m in ['mobile', 'android', 'iphone', 'ipod', 'blackberry', 'windows phone']):
+        device = 'Mobile'
+    else:
+        device = 'Desktop'
+        
+    # OS
+    if 'windows nt 10' in ua_lower:
+        os_name = 'Windows 10/11'
+    elif 'windows nt 6.3' in ua_lower:
+        os_name = 'Windows 8.1'
+    elif 'windows nt 6.1' in ua_lower:
+        os_name = 'Windows 7'
+    elif 'windows' in ua_lower:
+        os_name = 'Windows'
+    elif 'iphone' in ua_lower or 'ipad' in ua_lower or 'ipod' in ua_lower:
+        os_name = 'iOS'
+    elif 'android' in ua_lower:
+        os_name = 'Android'
+    elif 'mac os x' in ua_lower or 'macintosh' in ua_lower:
+        os_name = 'macOS'
+    elif 'linux' in ua_lower:
+        os_name = 'Linux'
+    else:
+        os_name = 'Other'
+        
+    # Browser
+    if 'edg/' in ua_string or 'edge/' in ua_string:
+        browser = 'Edge'
+    elif 'opera' in ua_lower or 'opr/' in ua_string:
+        browser = 'Opera'
+    elif 'chrome/' in ua_string or 'crios/' in ua_string:
+        browser = 'Chrome'
+    elif 'firefox/' in ua_string or 'fxios/' in ua_string:
+        browser = 'Firefox'
+    elif 'safari/' in ua_string and 'chrome/' not in ua_string:
+        browser = 'Safari'
+    elif 'msie' in ua_lower or 'trident/' in ua_lower:
+        browser = 'Internet Explorer'
+    else:
+        browser = 'Other'
+        
+    return {
+        'device': device,
+        'os': os_name,
+        'browser': browser,
+        'is_bot': is_bot
+    }
+
+def parse_referrer(referrer_url):
+    if not referrer_url:
+        return {'url': '', 'domain': 'Direct / Bookmark', 'category': 'Direct'}
+    
+    try:
+        parsed = urllib.parse.urlparse(referrer_url)
+        domain = parsed.netloc.lower()
+        if not domain:
+            return {'url': referrer_url, 'domain': 'Direct / Bookmark', 'category': 'Direct'}
+        
+        if domain.startswith('www.'):
+            domain = domain[4:]
+            
+        category = 'Website'
+        if 'google.' in domain:
+            domain = 'Google'
+            category = 'Search Engine'
+        elif 'bing.' in domain:
+            domain = 'Bing'
+            category = 'Search Engine'
+        elif 't.me' in domain or 'telegram' in domain:
+            domain = 'Telegram'
+            category = 'Social Media'
+        elif 'linkedin.com' in domain:
+            domain = 'LinkedIn'
+            category = 'Social Media'
+        elif 'instagram.com' in domain:
+            domain = 'Instagram'
+            category = 'Social Media'
+        elif 'twitter.com' in domain or 'x.com' in domain or 't.co' in domain:
+            domain = 'Twitter / X'
+            category = 'Social Media'
+        elif 'github.com' in domain:
+            domain = 'GitHub'
+            category = 'Developer'
+        elif 'youtube.com' in domain:
+            domain = 'YouTube'
+            category = 'Social Media'
+        elif 'whatsapp.com' in domain:
+            domain = 'WhatsApp'
+            category = 'Social Media'
+            
+        return {'url': referrer_url, 'domain': domain, 'category': category}
+    except Exception:
+        return {'url': referrer_url, 'domain': 'External', 'category': 'Website'}
+
+def resolve_geo_for_visit(visit_id, ip, app_instance):
+    """Asynchronously resolves IP geolocation and updates the PageVisit record."""
+    if is_private_ip(ip):
+        return
+    
+    # Check in-memory cache
+    if ip in GEO_CACHE:
+        geo = GEO_CACHE[ip]
+        with app_instance.app_context():
+            try:
+                visit = db.session.get(PageVisit, visit_id)
+                if visit:
+                    visit.country = geo.get('country', 'Unknown')
+                    visit.country_code = geo.get('country_code', 'XX')
+                    visit.city = geo.get('city', 'Unknown')
+                    visit.isp = geo.get('isp', '')
+                    db.session.commit()
+            except Exception:
+                db.session.rollback()
+        return
+
+    # Try ip-api.com
+    try:
+        resp = requests.get(f"http://ip-api.com/json/{ip}?fields=status,message,country,countryCode,city,isp", timeout=3)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('status') == 'success':
+                geo = {
+                    'country': data.get('country') or 'Unknown',
+                    'country_code': data.get('countryCode') or 'XX',
+                    'city': data.get('city') or 'Unknown',
+                    'isp': data.get('isp') or ''
+                }
+                GEO_CACHE[ip] = geo
+                with app_instance.app_context():
+                    visit = db.session.get(PageVisit, visit_id)
+                    if visit:
+                        visit.country = geo['country']
+                        visit.country_code = geo['country_code']
+                        visit.city = geo['city']
+                        visit.isp = geo['isp']
+                        db.session.commit()
+                return
+    except Exception:
+        pass
+    
+    # Fallback to ipapi.co
+    try:
+        resp = requests.get(f"https://ipapi.co/{ip}/json/", timeout=3, headers={'User-Agent': 'Mozilla/5.0'})
+        if resp.status_code == 200:
+            data = resp.json()
+            geo = {
+                'country': data.get('country_name') or 'Unknown',
+                'country_code': data.get('country_code') or 'XX',
+                'city': data.get('city') or 'Unknown',
+                'isp': data.get('org') or ''
+            }
+            GEO_CACHE[ip] = geo
+            with app_instance.app_context():
+                visit = db.session.get(PageVisit, visit_id)
+                if visit:
+                    visit.country = geo['country']
+                    visit.country_code = geo['country_code']
+                    visit.city = geo['city']
+                    visit.isp = geo['isp']
+                    db.session.commit()
+    except Exception:
+        pass
+
+def get_page_title(path):
+    if path == '/' or path == '':
+        return 'Home / Portfolio'
+    elif path.startswith('/demo/'):
+        parts = [p for p in path.split('/') if p]
+        slug = parts[1] if len(parts) > 1 else ''
+        return f'Demo: {slug}' if slug else 'Demo Site'
+    elif path == '/download_resume':
+        return 'Download Resume PDF'
+    elif path == '/api/portfolio':
+        return 'Portfolio API'
+    return path
+
+# --- Visitor Tracking Middleware ---
+@app.before_request
+def track_visitor():
+    path = request.path
+    
+    # Ignore static files, uploads, admin routes, and auth routes
+    if (path.startswith('/static') or 
+        path.startswith('/assets') or 
+        path.startswith('/admin') or 
+        path.startswith('/login') or 
+        path.startswith('/logout') or 
+        path.endswith(('.ico', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.css', '.js', '.map', '.woff', '.woff2', '.ttf', '.webp', '.mp4'))):
+        return
+    
+    # Don't track if the logged-in admin is browsing
+    if current_user.is_authenticated and path.startswith('/admin'):
+        return
+
+    try:
+        ip = get_client_ip()
+        ua_string = request.headers.get('User-Agent', '')
+        ua_info = parse_user_agent(ua_string)
+        
+        # Check Cloudflare Country Header
+        cf_country = request.headers.get('CF-IPCountry')
+        initial_country = 'Unknown'
+        initial_code = 'XX'
+        initial_city = 'Unknown'
+        initial_isp = ''
+        
+        if is_private_ip(ip):
+            initial_country = 'Localhost'
+            initial_code = 'LAN'
+            initial_city = 'Local Network'
+        elif ip in GEO_CACHE:
+            cached = GEO_CACHE[ip]
+            initial_country = cached.get('country', 'Unknown')
+            initial_code = cached.get('country_code', 'XX')
+            initial_city = cached.get('city', 'Unknown')
+            initial_isp = cached.get('isp', '')
+        elif cf_country and cf_country != 'XX':
+            initial_code = cf_country
+            initial_country = cf_country
+            
+        ref = request.referrer or request.args.get('ref') or request.args.get('utm_source') or ''
+        ref_info = parse_referrer(ref)
+        
+        today_str = datetime.date.today().isoformat()
+        visitor_hash = hashlib.sha256(f"{ip}_{ua_string}_{today_str}".encode('utf-8')).hexdigest()[:16]
+        
+        visit = PageVisit(
+            ip_address=ip,
+            country=initial_country,
+            country_code=initial_code,
+            city=initial_city,
+            isp=initial_isp,
+            path=path,
+            page_title=get_page_title(path),
+            referrer=ref,
+            referrer_domain=ref_info['domain'],
+            user_agent=ua_string[:500],
+            device_type=ua_info['device'],
+            browser=ua_info['browser'],
+            os=ua_info['os'],
+            is_bot=ua_info['is_bot'],
+            visitor_hash=visitor_hash,
+            timestamp=datetime.datetime.utcnow()
+        )
+        db.session.add(visit)
+        db.session.commit()
+        
+        # Async geo resolution if needed
+        if not is_private_ip(ip) and ip not in GEO_CACHE and (initial_city == 'Unknown' or initial_country == 'Unknown'):
+            threading.Thread(target=resolve_geo_for_visit, args=(visit.id, ip, app), daemon=True).start()
+            
+    except Exception:
+        db.session.rollback()
 
 # --- User Loader ---
 @login_manager.user_loader
@@ -199,17 +669,22 @@ def api_portfolio():
 
 @app.route('/download_resume')
 def download_resume():
-    """Downloads the standard, generic resume."""
+    """Downloads the standard resume using the user's active selected template."""
     profile = Profile.query.first()
     projects = Project.query.order_by(Project.order.asc()).all()
     items = ResumeItem.query.order_by(ResumeItem.order.asc()).all()
     skills = Skill.query.order_by(Skill.order.asc()).all()
 
-    rendered = render_template('resume_pdf_template.html', 
+    active_tpl_key = (profile.resume_template if profile and profile.resume_template else 'modern')
+    tpl_info = RESUME_TEMPLATES.get(active_tpl_key, RESUME_TEMPLATES['modern'])
+
+    rendered = render_template(tpl_info['template_file'], 
                                profile=profile, 
                                projects=projects, 
                                items=items,
-                               skills=skills)
+                               skills=skills,
+                               host_url=request.host_url.rstrip('/'),
+                               request=request)
     
     pdf = BytesIO()
     pisa_status = pisa.CreatePDF(BytesIO(rendered.encode("UTF-8")), dest=pdf)
@@ -322,6 +797,201 @@ def logout():
 @login_required
 def admin_dashboard():
     return render_template('admin_dashboard.html')
+
+# --- Admin Analytics Routes ---
+
+@app.route('/admin/analytics')
+@login_required
+def admin_analytics():
+    time_range = request.args.get('range', '7d')
+    search_query = request.args.get('search', '').strip()
+    bot_filter = request.args.get('bot', '0')
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 50))
+    
+    now = datetime.datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Calculate cutoff date based on range
+    if time_range == 'today':
+        cutoff = today_start
+    elif time_range == '7d':
+        cutoff = now - datetime.timedelta(days=7)
+    elif time_range == '30d':
+        cutoff = now - datetime.timedelta(days=30)
+    else:  # 'all'
+        cutoff = None
+        
+    base_query = PageVisit.query
+    if cutoff:
+        base_query = base_query.filter(PageVisit.timestamp >= cutoff)
+        
+    if bot_filter == '0':
+        base_query = base_query.filter(PageVisit.is_bot == False)
+    elif bot_filter == '1':
+        base_query = base_query.filter(PageVisit.is_bot == True)
+        
+    if search_query:
+        search_like = f"%{search_query}%"
+        base_query = base_query.filter(
+            or_(
+                PageVisit.ip_address.like(search_like),
+                PageVisit.path.like(search_like),
+                PageVisit.country.like(search_like),
+                PageVisit.city.like(search_like),
+                PageVisit.referrer_domain.like(search_like),
+                PageVisit.browser.like(search_like),
+                PageVisit.os.like(search_like)
+            )
+        )
+        
+    # Global KPIs
+    all_time_views = PageVisit.query.count()
+    all_time_unique = db.session.query(func.count(distinct(PageVisit.visitor_hash))).scalar() or 0
+    today_views = PageVisit.query.filter(PageVisit.timestamp >= today_start).count()
+    today_unique = db.session.query(func.count(distinct(PageVisit.visitor_hash))).filter(PageVisit.timestamp >= today_start).scalar() or 0
+    
+    # Filtered KPI metrics
+    filtered_views = base_query.count()
+    filtered_unique = base_query.with_entities(func.count(distinct(PageVisit.visitor_hash))).scalar() or 0
+    
+    # Top Pages
+    top_pages = base_query.with_entities(
+        PageVisit.path, 
+        PageVisit.page_title, 
+        func.count(PageVisit.id).label('count')
+    ).group_by(PageVisit.path, PageVisit.page_title).order_by(desc('count')).limit(10).all()
+    
+    # Top Referrers
+    top_referrers = base_query.with_entities(
+        PageVisit.referrer_domain,
+        func.count(PageVisit.id).label('count')
+    ).group_by(PageVisit.referrer_domain).order_by(desc('count')).limit(10).all()
+    
+    # Top Countries
+    top_countries = base_query.with_entities(
+        PageVisit.country,
+        PageVisit.country_code,
+        func.count(PageVisit.id).label('count')
+    ).group_by(PageVisit.country, PageVisit.country_code).order_by(desc('count')).limit(10).all()
+    
+    # Device breakdown
+    device_counts = base_query.with_entities(
+        PageVisit.device_type,
+        func.count(PageVisit.id).label('count')
+    ).group_by(PageVisit.device_type).all()
+    
+    # Browser breakdown
+    browser_counts = base_query.with_entities(
+        PageVisit.browser,
+        func.count(PageVisit.id).label('count')
+    ).group_by(PageVisit.browser).order_by(desc('count')).limit(6).all()
+
+    # OS breakdown
+    os_counts = base_query.with_entities(
+        PageVisit.os,
+        func.count(PageVisit.id).label('count')
+    ).group_by(PageVisit.os).order_by(desc('count')).limit(6).all()
+    
+    # Timeline chart data
+    chart_days = 30 if time_range == '30d' else (7 if time_range == '7d' else (1 if time_range == 'today' else 14))
+    chart_labels = []
+    chart_views = []
+    chart_uniques = []
+    
+    if time_range == 'today':
+        for h in range(24):
+            h_start = today_start + datetime.timedelta(hours=h)
+            h_end = h_start + datetime.timedelta(hours=1)
+            h_views = PageVisit.query.filter(PageVisit.timestamp >= h_start, PageVisit.timestamp < h_end, PageVisit.is_bot == False).count()
+            h_unique = db.session.query(func.count(distinct(PageVisit.visitor_hash))).filter(PageVisit.timestamp >= h_start, PageVisit.timestamp < h_end, PageVisit.is_bot == False).scalar() or 0
+            chart_labels.append(f"{h:02d}:00")
+            chart_views.append(h_views)
+            chart_uniques.append(h_unique)
+    else:
+        for d in range(chart_days - 1, -1, -1):
+            day_date = (now - datetime.timedelta(days=d)).date()
+            d_start = datetime.datetime.combine(day_date, datetime.time.min)
+            d_end = datetime.datetime.combine(day_date, datetime.time.max)
+            
+            d_views = PageVisit.query.filter(PageVisit.timestamp >= d_start, PageVisit.timestamp <= d_end, PageVisit.is_bot == False).count()
+            d_unique = db.session.query(func.count(distinct(PageVisit.visitor_hash))).filter(PageVisit.timestamp >= d_start, PageVisit.timestamp <= d_end, PageVisit.is_bot == False).scalar() or 0
+            
+            chart_labels.append(day_date.strftime('%b %d'))
+            chart_views.append(d_views)
+            chart_uniques.append(d_unique)
+            
+    # Recent visits pagination
+    visits_pagination = base_query.order_by(PageVisit.timestamp.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    
+    return render_template(
+        'admin_analytics.html',
+        all_time_views=all_time_views,
+        all_time_unique=all_time_unique,
+        today_views=today_views,
+        today_unique=today_unique,
+        filtered_views=filtered_views,
+        filtered_unique=filtered_unique,
+        top_pages=top_pages,
+        top_referrers=top_referrers,
+        top_countries=top_countries,
+        device_counts=device_counts,
+        browser_counts=browser_counts,
+        os_counts=os_counts,
+        chart_labels=json.dumps(chart_labels),
+        chart_views=json.dumps(chart_views),
+        chart_uniques=json.dumps(chart_uniques),
+        visits=visits_pagination.items,
+        pagination=visits_pagination,
+        time_range=time_range,
+        search_query=search_query,
+        bot_filter=bot_filter
+    )
+
+@app.route('/admin/analytics/export')
+@login_required
+def export_analytics():
+    visits = PageVisit.query.order_by(PageVisit.timestamp.desc()).all()
+    
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['ID', 'Timestamp (UTC)', 'IP Address', 'Country', 'Country Code', 'City', 'ISP', 'Path', 'Page Title', 'Referrer Domain', 'Referrer URL', 'Device', 'Browser', 'OS', 'Is Bot'])
+    
+    for v in visits:
+        cw.writerow([
+            v.id,
+            v.timestamp.strftime('%Y-%m-%d %H:%M:%S') if v.timestamp else '',
+            v.ip_address,
+            v.country,
+            v.country_code,
+            v.city,
+            v.isp,
+            v.path,
+            v.page_title,
+            v.referrer_domain,
+            v.referrer,
+            v.device_type,
+            v.browser,
+            v.os,
+            'Yes' if v.is_bot else 'No'
+        ])
+        
+    output = make_response(si.getvalue().encode('utf-8-sig'))
+    output.headers["Content-Disposition"] = f"attachment; filename=visitor_logs_{datetime.date.today().isoformat()}.csv"
+    output.headers["Content-type"] = "text/csv; charset=utf-8"
+    return output
+
+@app.route('/admin/analytics/clear', methods=['POST'])
+@login_required
+def clear_analytics():
+    try:
+        PageVisit.query.delete()
+        db.session.commit()
+        flash('All visitor logs have been successfully cleared.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error clearing logs: {str(e)}', 'danger')
+    return redirect(url_for('admin_analytics'))
 
 @app.route('/admin/refresh-ai-knowledge')
 @login_required
@@ -508,12 +1178,28 @@ def ai_resume_generate():
         'papers': process(ResumeItem, ids['paper'], 'desc_paper')
     }
 
-    rendered = render_template('manual_pdf_template.html', data=data)
+    active_tpl_key = request.form.get('template_id') or (Profile.query.first().resume_template if Profile.query.first() and Profile.query.first().resume_template else 'modern')
+    tpl_info = RESUME_TEMPLATES.get(active_tpl_key, RESUME_TEMPLATES['modern'])
+
+    rendered = render_template(tpl_info['template_file'],
+                               profile=Profile.query.first(),
+                               projects=data['projects'],
+                               items=data['experience'] + data['education'] + data['honors'] + data['papers'],
+                               skills=data['skills'],
+                               target_role=target_role,
+                               summary=custom_summary,
+                               host_url=request.host_url.rstrip('/'),
+                               request=request,
+                               data=data)
     pdf = BytesIO()
-    pisa.CreatePDF(BytesIO(rendered.encode("UTF-8")), dest=pdf)
+    pisa_status = pisa.CreatePDF(BytesIO(rendered.encode("UTF-8")), dest=pdf)
+    if pisa_status.err:
+        return f"PDF Error: {pisa_status.err}"
+        
     response = make_response(pdf.getvalue())
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'attachment; filename=AI_Resume_{target_role.replace(" ", "_")}.pdf'
+    role_filename = (target_role or "Custom").replace(" ", "_")
+    response.headers['Content-Disposition'] = f'attachment; filename=AI_Resume_{role_filename}.pdf'
     return response
 
 # --- Manual Resume Builder ---
@@ -623,6 +1309,57 @@ def generate_about_me():
         return jsonify({"success": True, "text": generated_text})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+# --- Resume Template Gallery & Selector ---
+
+@app.route('/admin/resume-templates', methods=['GET', 'POST'])
+@login_required
+def admin_resume_templates():
+    profile = Profile.query.first()
+    if request.method == 'POST':
+        selected_id = request.form.get('template_id')
+        if selected_id in RESUME_TEMPLATES:
+            if profile:
+                profile.resume_template = selected_id
+                db.session.commit()
+                flash(f"Resume template successfully changed to '{RESUME_TEMPLATES[selected_id]['name']}'!", "success")
+        return redirect(url_for('admin_resume_templates'))
+    
+    current_template = (profile.resume_template if profile and profile.resume_template else 'modern')
+    return render_template('admin_resume_templates.html', 
+                           templates_list=list(RESUME_TEMPLATES.values()),
+                           current_template=current_template)
+
+@app.route('/admin/resume-templates/preview/<template_key>')
+@login_required
+def admin_resume_template_preview(template_key):
+    if template_key not in RESUME_TEMPLATES:
+        template_key = 'modern'
+        
+    tpl_info = RESUME_TEMPLATES[template_key]
+    profile = Profile.query.first()
+    projects = Project.query.order_by(Project.order.asc()).all()
+    items = ResumeItem.query.order_by(ResumeItem.order.asc()).all()
+    skills = Skill.query.order_by(Skill.order.asc()).all()
+    
+    rendered = render_template(tpl_info['template_file'],
+                               profile=profile,
+                               projects=projects,
+                               items=items,
+                               skills=skills,
+                               target_role="Senior AI Specialist & Full-Stack Engineer",
+                               host_url=request.host_url.rstrip('/'),
+                               request=request)
+    
+    pdf = BytesIO()
+    pisa_status = pisa.CreatePDF(BytesIO(rendered.encode("UTF-8")), dest=pdf)
+    if pisa_status.err:
+        return f"PDF Error: {pisa_status.err}"
+        
+    response = make_response(pdf.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'inline; filename=Resume_Preview_{template_key}.pdf'
+    return response
 
 # --- CRUD Routes (Resume Items) ---
 

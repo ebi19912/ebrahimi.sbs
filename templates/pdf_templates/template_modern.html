@@ -8,48 +8,47 @@
             size: A4;
             margin: 1.2cm 1.4cm 1.2cm 1.4cm;
         }
-        
         body {
             font-family: Helvetica, Arial, sans-serif;
             color: #1e293b;
             line-height: 1.35;
             font-size: 9.5pt;
         }
-
-        /* --- Header Section --- */
         .header {
             text-align: center;
             margin-bottom: 10px;
             padding-bottom: 8px;
             border-bottom: 1.5px solid #0f172a;
         }
-
         .name {
             font-size: 20pt;
             font-weight: bold;
             color: #0f172a;
             letter-spacing: 0.5px;
-            margin: 0 0 4px 0;
+            margin: 0 0 3px 0;
             text-transform: uppercase;
         }
-
+        .target-role {
+            font-size: 10.5pt;
+            font-weight: bold;
+            color: #2563eb;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
         .contact-bar {
             font-size: 8.5pt;
             color: #475569;
             line-height: 1.4;
         }
-
         .contact-bar a {
             color: #2563eb;
             text-decoration: none;
         }
-
         .separator {
             color: #94a3b8;
             padding: 0 2px;
         }
-
-        /* --- Section Titles --- */
         .section-header {
             font-size: 10pt;
             font-weight: bold;
@@ -61,26 +60,21 @@
             margin-top: 10px;
             margin-bottom: 6px;
         }
-
-        /* --- Entry Table Layout (ATS friendly & exact stream order) --- */
         .entry-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 2px;
         }
-
         .entry-table td {
             padding: 0;
             vertical-align: top;
         }
-
         .entry-title {
             font-size: 9.5pt;
             font-weight: bold;
             color: #0f172a;
             text-align: left;
         }
-
         .entry-date {
             font-size: 8.5pt;
             font-weight: bold;
@@ -88,15 +82,12 @@
             text-align: right;
             white-space: nowrap;
         }
-
         .entry-org {
             font-size: 9pt;
             font-style: italic;
             color: #334155;
             text-align: left;
         }
-
-        /* --- Content & Lists --- */
         .summary-text {
             font-size: 9pt;
             color: #334155;
@@ -104,48 +95,38 @@
             line-height: 1.35;
             margin-bottom: 4px;
         }
-
         .item-block {
             margin-bottom: 8px;
             page-break-inside: avoid;
         }
-
         .description {
             font-size: 9pt;
             color: #334155;
             margin-top: 2px;
             line-height: 1.35;
         }
-
         .description ul {
             margin: 2px 0 3px 14px;
             padding: 0;
         }
-
         .description li {
             margin-bottom: 2px;
         }
-
         .description p {
             margin: 2px 0;
         }
-
-        /* --- Skills Grid Table --- */
         .skills-grid-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 2px;
             margin-bottom: 4px;
         }
-
         .skills-grid-table td {
             padding: 2px 4px;
             vertical-align: middle;
             font-size: 8.5pt;
             color: #1e293b;
         }
-
-        /* --- Project Badges --- */
         .badge-status {
             font-size: 7.5pt;
             padding: 1px 4px;
@@ -155,56 +136,46 @@
         }
         .status-completed { background-color: #dcfce7; color: #166534; }
         .status-ongoing { background-color: #fef3c7; color: #92400e; }
-
-        a {
-            color: #2563eb;
-            text-decoration: none;
-        }
+        a { color: #2563eb; text-decoration: none; }
     </style>
 </head>
 <body>
-
-    <!-- Header Section -->
     <div class="header">
         <h1 class="name">{{ profile.full_name }}</h1>
+        {% if target_role %}
+            <div class="target-role">{{ target_role }}</div>
+        {% endif %}
         <div class="contact-bar">
             {% if profile.address %}{{ profile.address }}{% endif %}
-            {% if profile.email %}<span class="separator">&nbsp;|&nbsp;</span><a href="mailto:{{ profile.email }}">{{ profile.email }}</a>{% endif %}
-            {% if profile.mobile %}<span class="separator">&nbsp;|&nbsp;</span>{{ profile.mobile }}{% endif %}
-            {% if profile.linkedin %}<span class="separator">&nbsp;|&nbsp;</span><a href="{{ profile.linkedin }}">{{ profile.linkedin | clean_url }}</a>{% endif %}
-            {% if profile.github %}<span class="separator">&nbsp;|&nbsp;</span><a href="{{ profile.github }}">{{ profile.github | clean_url }}</a>{% endif %}
-            {% if request and request.host_url %}<span class="separator">&nbsp;|&nbsp;</span><a href="{{ request.host_url }}">{{ request.host_url | clean_url }}</a>{% endif %}
+            {% if profile.email and profile.show_email != false %}<span class="separator">&nbsp;|&nbsp;</span><a href="mailto:{{ profile.email }}">{{ profile.email }}</a>{% endif %}
+            {% if profile.mobile and profile.show_mobile != false %}<span class="separator">&nbsp;|&nbsp;</span>{{ profile.mobile }}{% endif %}
+            {% if profile.linkedin and profile.show_linkedin != false %}<span class="separator">&nbsp;|&nbsp;</span><a href="{{ profile.linkedin }}">{{ profile.linkedin | clean_url }}</a>{% endif %}
+            {% if profile.github and profile.show_github != false %}<span class="separator">&nbsp;|&nbsp;</span><a href="{{ profile.github }}">{{ profile.github | clean_url }}</a>{% endif %}
+            {% if host_url %}<span class="separator">&nbsp;|&nbsp;</span><a href="{{ host_url }}">{{ host_url | clean_url }}</a>{% endif %}
         </div>
     </div>
 
-    <!-- Professional Summary -->
-    {% if profile.about_me %}
+    {% if summary or profile.about_me %}
     <div class="section-header">Professional Summary</div>
     <div class="summary-text">
-        {{ profile.about_me | clean_pdf_html | safe }}
+        {{ (summary or profile.about_me) | clean_pdf_html | safe }}
     </div>
     {% endif %}
 
-    <!-- Technical Skills -->
     {% if skills %}
     <div class="section-header">Technical Skills</div>
     <table class="skills-grid-table">
         {% for row in skills | batch(2) %}
         <tr>
             {% for s in row %}
-            <td width="50%">
-                &bull; <strong>{{ s.name }}</strong>
-            </td>
+            <td width="50%">&bull; <strong>{{ s.name if s.name is defined else s }}</strong></td>
             {% endfor %}
-            {% if row | length == 1 %}
-            <td width="50%"></td>
-            {% endif %}
+            {% if row | length == 1 %}<td width="50%"></td>{% endif %}
         </tr>
         {% endfor %}
     </table>
     {% endif %}
 
-    <!-- Work Experience -->
     {% set work_items = items | selectattr('category', 'equalto', 'work') | list %}
     {% if work_items %}
     <div class="section-header">Work Experience</div>
@@ -220,15 +191,12 @@
             </tr>
         </table>
         {% if item.description %}
-        <div class="description">
-            {{ item.description | clean_pdf_html | safe }}
-        </div>
+        <div class="description">{{ item.description | clean_pdf_html | safe }}</div>
         {% endif %}
     </div>
     {% endfor %}
     {% endif %}
 
-    <!-- Education -->
     {% set edu_items = items | selectattr('category', 'equalto', 'education') | list %}
     {% if edu_items %}
     <div class="section-header">Education</div>
@@ -244,15 +212,12 @@
             </tr>
         </table>
         {% if item.description %}
-        <div class="description">
-            {{ item.description | clean_pdf_html | safe }}
-        </div>
+        <div class="description">{{ item.description | clean_pdf_html | safe }}</div>
         {% endif %}
     </div>
     {% endfor %}
     {% endif %}
 
-    <!-- Key Projects -->
     {% if projects %}
     <div class="section-header">Key Projects</div>
     {% for p in projects if p.short_description and p.short_description != 'No description provided.' %}
@@ -266,26 +231,19 @@
                         {{ 'Completed' if p.status == 'completed' else 'In Progress' }}
                     </span>
                     {% endif %}
-                    {% if p.github_link %}
-                        &nbsp;<a href="{{ p.github_link }}">GitHub</a>
-                    {% endif %}
-                    {% if p.live_link %}
-                        &nbsp;|&nbsp;<a href="{{ p.live_link }}">Live Demo</a>
-                    {% endif %}
+                    {% if p.github_link %}&nbsp;<a href="{{ p.github_link }}">GitHub</a>{% endif %}
+                    {% if p.live_link %}&nbsp;|&nbsp;<a href="{{ p.live_link }}">Live Demo</a>{% endif %}
                 </td>
             </tr>
         </table>
         <div class="description">
             {{ p.short_description | clean_pdf_html | safe }}
-            {% if p.full_content %}
-            <br>{{ p.full_content | clean_pdf_html | safe }}
-            {% endif %}
+            {% if p.full_content %}<br>{{ p.full_content | clean_pdf_html | safe }}{% endif %}
         </div>
     </div>
     {% endfor %}
     {% endif %}
 
-    <!-- Honors & Awards -->
     {% set honor_items = items | selectattr('category', 'equalto', 'honor') | list %}
     {% if honor_items %}
     <div class="section-header">Honors &amp; Awards</div>
@@ -296,20 +254,15 @@
                 <td class="entry-title">{{ item.title }}</td>
                 <td class="entry-date">{{ item.duration }}</td>
             </tr>
-            <tr>
-                <td class="entry-org" colspan="2">{{ item.organization }}</td>
-            </tr>
+            <tr><td class="entry-org" colspan="2">{{ item.organization }}</td></tr>
         </table>
         {% if item.description %}
-        <div class="description">
-            {{ item.description | clean_pdf_html | safe }}
-        </div>
+        <div class="description">{{ item.description | clean_pdf_html | safe }}</div>
         {% endif %}
     </div>
     {% endfor %}
     {% endif %}
 
-    <!-- Publications -->
     {% set paper_items = items | selectattr('category', 'equalto', 'paper') | list %}
     {% if paper_items %}
     <div class="section-header">Publications</div>
@@ -321,27 +274,19 @@
                 <td class="entry-date">{{ item.duration }}</td>
             </tr>
             {% if item.organization %}
-            <tr>
-                <td class="entry-org" colspan="2">{{ item.organization }}</td>
-            </tr>
+            <tr><td class="entry-org" colspan="2">{{ item.organization }}</td></tr>
             {% endif %}
         </table>
         {% if item.description %}
-        <div class="description">
-            {{ item.description | clean_pdf_html | safe }}
-        </div>
+        <div class="description">{{ item.description | clean_pdf_html | safe }}</div>
         {% endif %}
     </div>
     {% endfor %}
     {% endif %}
 
-    <!-- Interests & Hobbies -->
     {% if profile.hobbies %}
     <div class="section-header">Interests &amp; Hobbies</div>
-    <div class="description">
-        {{ profile.hobbies | clean_pdf_html | safe }}
-    </div>
+    <div class="description">{{ profile.hobbies | clean_pdf_html | safe }}</div>
     {% endif %}
-
 </body>
 </html>

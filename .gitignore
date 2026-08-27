@@ -17,3 +17,8 @@ instance/chroma_db/
 # Frontend node_modules (we track frontend/dist so no Node.js required on server)
 frontend/node_modules/
 instance/database.db
+
+# Generated PDFs
+Resume.pdf
+static/Resume.pdf
+static/resume_page_*.png
