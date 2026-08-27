@@ -98,7 +98,7 @@
             margin-bottom: 4px;
         }
         .item-block {
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             page-break-inside: avoid;
         }
         .description {
@@ -222,26 +222,31 @@
 
     {% if projects %}
     <div class="section-header">Key Projects</div>
-    {% for p in projects if p.short_description and p.short_description != 'No description provided.' %}
+    {% for p in projects %}
     <div class="item-block">
         <table class="entry-table">
             <tr>
-                <td class="entry-title">{{ p.title }}</td>
-                <td class="entry-date">
+                <td class="entry-title">
+                    {{ p.title }}
                     {% if p.status %}
                     <span class="badge-status {{ 'status-completed' if p.status == 'completed' else 'status-ongoing' }}">
                         {{ 'Completed' if p.status == 'completed' else 'In Progress' }}
                     </span>
                     {% endif %}
-                    {% if p.github_link %}&nbsp;<a href="{{ p.github_link }}">GitHub</a>{% endif %}
-                    {% if p.live_link %}&nbsp;|&nbsp;<a href="{{ p.live_link }}">Live Demo</a>{% endif %}
+                </td>
+                <td class="entry-date">
+                    {% if p.github_link and p.github_link.strip() %}
+                        <a href="{{ p.github_link }}">GitHub</a>
+                    {% endif %}
+                    {% if p.github_link and p.github_link.strip() and p.live_link and p.live_link.strip() %}
+                        <span class="separator">&nbsp;|&nbsp;</span>
+                    {% endif %}
+                    {% if p.live_link and p.live_link.strip() %}
+                        <a href="{{ p.live_link }}">Live Demo</a>
+                    {% endif %}
                 </td>
             </tr>
         </table>
-        <div class="description">
-            {{ p.short_description | clean_pdf_html | safe }}
-            {% if p.full_content %}<br>{{ p.full_content | clean_pdf_html | safe }}{% endif %}
-        </div>
     </div>
     {% endfor %}
     {% endif %}
