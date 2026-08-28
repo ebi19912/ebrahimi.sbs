@@ -111,6 +111,11 @@
                 <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm fw-bold">
                     <i class="bi bi-grid-fill me-1"></i> Dashboard
                 </a>
+                <form method="POST" action="{{ url_for('reclassify_analytics') }}" class="d-inline">
+                    <button type="submit" class="btn btn-warning btn-sm fw-bold shadow-sm" title="Re-scan and filter out bots, crawlers, and vulnerability probes from historical records">
+                        <i class="bi bi-shield-check me-1"></i> Clean & Filter Bots
+                    </button>
+                </form>
                 <a href="{{ url_for('export_analytics') }}" class="btn btn-success btn-sm fw-bold">
                     <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
                 </a>
@@ -165,11 +170,11 @@
                         <input type="hidden" name="range" value="{{ time_range }}">
                         
                         <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-light"><i class="bi bi-robot"></i></span>
-                            <select name="bot" class="form-select form-select-sm" onchange="this.form.submit()">
-                                <option value="0" {% if bot_filter == '0' %}selected{% endif %}>Human Visitors Only</option>
-                                <option value="all" {% if bot_filter == 'all' %}selected{% endif %}>All Traffic (Human + Bots)</option>
-                                <option value="1" {% if bot_filter == '1' %}selected{% endif %}>Crawlers / Bots Only</option>
+                            <span class="input-group-text bg-light"><i class="bi bi-funnel-fill"></i></span>
+                            <select name="bot" class="form-select form-select-sm fw-medium" onchange="this.form.submit()">
+                                <option value="0" {% if bot_filter == '0' %}selected{% endif %}>👤 Real Humans Only</option>
+                                <option value="all" {% if bot_filter == 'all' %}selected{% endif %}>🌐 All Traffic (Humans + Bots)</option>
+                                <option value="1" {% if bot_filter == '1' %}selected{% endif %}>🤖 Bots, Scanners & Probes Only</option>
                             </select>
                         </div>
 
@@ -190,33 +195,33 @@
 
         <!-- Metric KPI Cards -->
         <div class="row g-3 mb-4">
-            <!-- Total Pageviews -->
+            <!-- Total Real Human Pageviews -->
             <div class="col-6 col-lg-3">
                 <div class="stat-card p-3 p-md-4">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-semibold text-uppercase">Total Pageviews</span>
+                            <span class="text-muted small fw-semibold text-uppercase">Verified Human Views</span>
                             <h3 class="fw-bold mt-1 mb-0 text-dark">{{ "{:,}".format(all_time_views) }}</h3>
                             <small class="text-muted" style="font-size: 0.78rem;">
-                                {% if time_range != 'all' %}Filtered: <span class="fw-bold text-primary">{{ "{:,}".format(filtered_views) }}</span>{% else %}All recorded hits{% endif %}
+                                {% if time_range != 'all' %}Filtered in view: <span class="fw-bold text-primary">{{ "{:,}".format(filtered_views) }}</span>{% else %}Genuine pageviews{% endif %}
                             </small>
                         </div>
                         <div class="stat-icon bg-primary bg-opacity-10 text-primary">
-                            <i class="bi bi-eye-fill"></i>
+                            <i class="bi bi-person-fill"></i>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Unique Visitors -->
+            <!-- Unique Human Visitors -->
             <div class="col-6 col-lg-3">
                 <div class="stat-card p-3 p-md-4">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-semibold text-uppercase">Unique Visitors</span>
+                            <span class="text-muted small fw-semibold text-uppercase">Unique Human Visitors</span>
                             <h3 class="fw-bold mt-1 mb-0 text-success">{{ "{:,}".format(all_time_unique) }}</h3>
                             <small class="text-muted" style="font-size: 0.78rem;">
-                                {% if time_range != 'all' %}Filtered: <span class="fw-bold text-success">{{ "{:,}".format(filtered_unique) }}</span>{% else %}Distinct IP & Devices{% endif %}
+                                {% if time_range != 'all' %}Filtered in view: <span class="fw-bold text-success">{{ "{:,}".format(filtered_unique) }}</span>{% else %}Distinct real people{% endif %}
                             </small>
                         </div>
                         <div class="stat-icon bg-success bg-opacity-10 text-success">
@@ -226,33 +231,35 @@
                 </div>
             </div>
 
-            <!-- Today's Pageviews -->
+            <!-- Today's Real Human Pageviews -->
             <div class="col-6 col-lg-3">
                 <div class="stat-card p-3 p-md-4">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-semibold text-uppercase">Today's Views</span>
+                            <span class="text-muted small fw-semibold text-uppercase">Today's Human Views</span>
                             <h3 class="fw-bold mt-1 mb-0 text-warning">{{ "{:,}".format(today_views) }}</h3>
-                            <small class="text-muted" style="font-size: 0.78rem;">Since 00:00 UTC</small>
+                            <small class="text-muted" style="font-size: 0.78rem;">
+                                Uniques today: <span class="fw-bold text-dark">{{ "{:,}".format(today_unique) }}</span>
+                            </small>
                         </div>
                         <div class="stat-icon bg-warning bg-opacity-10 text-warning">
-                            <i class="bi bi-calendar-event-fill"></i>
+                            <i class="bi bi-calendar-check-fill"></i>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Today's Unique Visitors -->
+            <!-- Filtered Bot & Exploit Probes -->
             <div class="col-6 col-lg-3">
                 <div class="stat-card p-3 p-md-4">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-semibold text-uppercase">Today's Uniques</span>
-                            <h3 class="fw-bold mt-1 mb-0 text-info">{{ "{:,}".format(today_unique) }}</h3>
-                            <small class="text-muted" style="font-size: 0.78rem;">Distinct visitors today</small>
+                            <span class="text-muted small fw-semibold text-uppercase">Bots & Probes Blocked</span>
+                            <h3 class="fw-bold mt-1 mb-0 text-danger">{{ "{:,}".format(total_bot_attacks) }}</h3>
+                            <small class="text-muted" style="font-size: 0.78rem;">Automated scanners filtered</small>
                         </div>
-                        <div class="stat-icon bg-info bg-opacity-10 text-info">
-                            <i class="bi bi-person-check-fill"></i>
+                        <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                            <i class="bi bi-shield-shaded"></i>
                         </div>
                     </div>
                 </div>
@@ -463,8 +470,12 @@
                                             <i class="bi bi-clipboard ms-1 copy-btn text-muted small" onclick="copyToClipboard('{{ v.ip_address }}')" title="Copy IP"></i>
                                         </div>
                                         {% if v.is_bot %}
-                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle mt-1" style="font-size: 0.65rem;">
-                                                <i class="bi bi-robot"></i> Bot / Crawler
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle mt-1 d-inline-block" style="font-size: 0.65rem;">
+                                                <i class="bi bi-robot"></i> Bot / Scanner
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle mt-1 d-inline-block" style="font-size: 0.65rem;">
+                                                <i class="bi bi-person-check-fill"></i> Real Visitor
                                             </span>
                                         {% endif %}
                                     </td>

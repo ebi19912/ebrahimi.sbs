@@ -216,48 +216,137 @@ RESUME_TEMPLATES = {
 # --- Geolocation & Tracking Helpers ---
 GEO_CACHE = {}  # In-memory IP geo cache: ip -> {country, country_code, city, isp}
 
+BOT_USER_AGENTS = [
+    'bot', 'crawl', 'spider', 'slurp', 'googlebot', 'bingbot', 'yandex', 'baiduspider',
+    'duckduckbot', 'twitterbot', 'facebookexternalhit', 'linkedinbot', 'telegrambot',
+    'applebot', 'semrush', 'ahrefs', 'dotbot', 'mj12bot', 'curl', 'wget', 'python',
+    'requests', 'aiohttp', 'httpx', 'urllib', 'go-http', 'java', 'libwww', 'httpclient',
+    'zgrab', 'censys', 'shodan', 'masscan', 'nmap', 'sqlmap', 'nikto', 'burp',
+    'headless', 'phantomjs', 'selenium', 'puppeteer', 'playwright', 'postman', 'insomnia',
+    'axios', 'node-fetch', 'got', 'undici', 'superagent', 'scrapy', 'feed', 'fetch',
+    'scan', 'probe', 'inspect', 'netcraft', 'openvas', 'qualys', 'acunetix', 'guzzle',
+    'fasthttp', 'faraday', 'winhttp', 'apache-http', 'expanse', 'shadowserver', 'archive.org',
+    'sogou', 'petalbot', 'bytespider', 'turnitin', 'screaming frog', 'siteexplorer'
+]
+
+EXPLOIT_EXTENSIONS = (
+    '.php', '.env', '.yml', '.yaml', '.json', '.xml', '.txt', '.bak', '.old', '.swp',
+    '.key', '.pem', '.config', '.conf', '.ini', '.sql', '.sh', '.exe', '.tar', '.gz',
+    '.zip', '.rar', '.7z', '.map', '.ico', '.png', '.jpg', '.jpeg', '.svg', '.css',
+    '.js', '.woff', '.woff2', '.ttf', '.webmanifest', '.action', '.do', '.jsp', '.asp',
+    '.aspx', '.cgi', '.log', '.properties', '.cfg', '.dist', '.temp', '.tmp'
+)
+
+EXPLOIT_PATH_SUBSTRINGS = (
+    'wp-', 'actuator', 'phpunit', 'eval-', 'cgi-bin', 'xmlrpc', 'vendor', '@fs',
+    'proc/', 'etc/passwd', 'shell', 'install', 'setup', 'credentials', 'phpmyadmin',
+    'boaform', 'autodiscover', 'owa', 'solr', 'telescope', 'adminer',
+    'webdav', 'invoker', 'geoserver', 'struts', 'remote', 'manager', 'ecp/', 'trace',
+    'metrics', 'swagger', 'api-docs', 'v1/graphql', 'graphql', 'alfa', 'chosen',
+    'database', 'secrets', 'service-account', 'firebase', 'azure', 'docker'
+)
+
+DATACENTER_ISPS = (
+    'microsoft', 'google llc', 'google cloud', 'amazon', 'aws', 'digitalocean', 'ovh',
+    'linode', 'akamai', 'alibaba', 'tencent', 'censys', 'hetzner', 'vultr', 'datacamp',
+    'hostinger', 'contabo', 'm247', 'leaseweb', 'choopa', 'the constant company',
+    'internetvikings', 'storm industries', 'techoff srv', 'scaleway', 'blix solutions',
+    'modat b.v.', 'omega tech', 'driftnet', 'web2objects', 'ucloud information',
+    'shenzhen tencent', 'alibaba (us)', 'aceville', '2day telecom'
+)
+
 def is_private_ip(ip):
     if not ip:
         return True
-    if ip in ('127.0.0.1', '::1', 'localhost', 'testclient'):
+    ip_clean = ip.strip()
+    if ip_clean in ('127.0.0.1', '::1', 'localhost', 'testclient'):
         return True
-    if ip.startswith(('192.168.', '10.', '172.16.', '172.17.', '172.18.', '172.19.', 
-                      '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', 
-                      '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.')):
+    if ip_clean.startswith(('192.168.', '10.', '172.16.', '172.17.', '172.18.', '172.19.', 
+                            '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', 
+                            '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',
+                            '100.64.', '100.65.', '100.66.', '100.67.', '100.68.', '100.69.',
+                            '100.70.', '100.71.', '100.72.', '100.73.', '100.74.', '100.75.',
+                            '100.76.', '100.77.', '100.78.', '100.79.', '100.80.', '100.81.',
+                            '100.82.', '100.83.', '100.84.', '100.85.', '100.86.', '100.87.',
+                            '100.88.', '100.89.', '100.90.', '100.91.', '100.92.', '100.93.',
+                            '100.94.', '100.95.', '100.96.', '100.97.', '100.98.', '100.99.',
+                            '100.100.', '100.101.', '100.102.', '100.103.', '100.104.', '100.105.',
+                            '100.106.', '100.107.', '100.108.', '100.109.', '100.110.', '100.111.',
+                            '100.112.', '100.113.', '100.114.', '100.115.', '100.116.', '100.117.',
+                            '100.118.', '100.119.', '100.120.', '100.121.', '100.122.', '100.123.',
+                            '100.124.', '100.125.', '100.126.', '100.127.')):
         return True
     return False
 
 def get_client_ip():
-    """Extracts client IP behind Cloudflare, Nginx, or direct connection."""
-    # 1. Cloudflare header
+    """Extracts client IP behind Cloudflare, Nginx, or direct connection with anti-spoofing."""
+    # 1. Cloudflare validated edge header (Cannot be forged by client)
     cf_ip = request.headers.get('CF-Connecting-IP')
-    if cf_ip:
+    if cf_ip and not is_private_ip(cf_ip):
         return cf_ip.strip()
     
-    # 2. X-Forwarded-For
+    # 2. X-Real-IP set by local Nginx proxy from $remote_addr
+    x_real = request.headers.get('X-Real-IP')
+    if x_real and not is_private_ip(x_real):
+        return x_real.strip()
+        
+    # 3. X-Forwarded-For: find the rightmost/first non-private IP
     xff = request.headers.get('X-Forwarded-For')
     if xff:
-        return xff.split(',')[0].strip()
-        
-    # 3. X-Real-IP
-    x_real = request.headers.get('X-Real-IP')
-    if x_real:
-        return x_real.strip()
+        ips = [ip.strip() for ip in xff.split(',')]
+        for ip in reversed(ips):  # Traverse from right to left (closest trusted proxy)
+            if ip and not is_private_ip(ip):
+                return ip
+        for ip in ips:
+            if ip and not is_private_ip(ip):
+                return ip
         
     return request.remote_addr or '127.0.0.1'
 
-def parse_user_agent(ua_string):
+def parse_user_agent(ua_string, path='', isp=''):
     if not ua_string:
-        return {'device': 'Unknown', 'os': 'Unknown', 'browser': 'Unknown', 'is_bot': False}
+        return {'device': 'Bot', 'os': 'Unknown', 'browser': 'Other', 'is_bot': True}
     
     ua_lower = ua_string.lower()
+    path_lower = (path or '').lower()
+    isp_lower = (isp or '').lower()
     
-    # Bot detection
-    bots = ['googlebot', 'bingbot', 'yandex', 'baiduspider', 'duckduckbot', 'slurp', 
-            'twitterbot', 'facebookexternalhit', 'linkedinbot', 'telegrambot', 'applebot', 
-            'semrushbot', 'ahrefsbot', 'dotbot', 'mj12bot', 'crawler', 'spider', 'robot', 'bot/']
-    is_bot = any(b in ua_lower for b in bots)
+    # Check 1: User Agent bot keywords
+    is_bot = any(b in ua_lower for b in BOT_USER_AGENTS)
     
+    # Check 2: Exploit paths are always bots/threats
+    if any(path_lower.endswith(ext) for ext in EXPLOIT_EXTENSIONS) or any(sub in path_lower for sub in EXPLOIT_PATH_SUBSTRINGS):
+        is_bot = True
+        
+    # Check 3: Short or suspicious UA
+    if len(ua_string) < 25:
+        is_bot = True
+        
+    # Check 4: Real Browser signature check (using case-insensitive ua_lower)
+    browser = 'Other'
+    if 'edg/' in ua_lower or 'edge/' in ua_lower:
+        browser = 'Edge'
+    elif 'samsungbrowser/' in ua_lower:
+        browser = 'Samsung Internet'
+    elif 'opera' in ua_lower or 'opr/' in ua_lower:
+        browser = 'Opera'
+    elif 'chrome/' in ua_lower or 'crios/' in ua_lower:
+        browser = 'Chrome'
+    elif 'firefox/' in ua_lower or 'fxios/' in ua_lower:
+        browser = 'Firefox'
+    elif 'safari/' in ua_lower and 'chrome/' not in ua_lower and 'crios/' not in ua_lower:
+        browser = 'Safari'
+    elif 'msie' in ua_lower or 'trident/' in ua_lower:
+        browser = 'Internet Explorer'
+    else:
+        browser = 'Other'
+        is_bot = True  # Real humans always use a standard browser engine
+        
+    # Check 5: Datacenter ISPs without valid browser interaction
+    if any(dc in isp_lower for dc in DATACENTER_ISPS):
+        if browser == 'Other' or path_lower not in ('/', ''):
+            is_bot = True
+            
     # Device
     if is_bot:
         device = 'Bot'
@@ -287,22 +376,6 @@ def parse_user_agent(ua_string):
         os_name = 'Linux'
     else:
         os_name = 'Other'
-        
-    # Browser
-    if 'edg/' in ua_string or 'edge/' in ua_string:
-        browser = 'Edge'
-    elif 'opera' in ua_lower or 'opr/' in ua_string:
-        browser = 'Opera'
-    elif 'chrome/' in ua_string or 'crios/' in ua_string:
-        browser = 'Chrome'
-    elif 'firefox/' in ua_string or 'fxios/' in ua_string:
-        browser = 'Firefox'
-    elif 'safari/' in ua_string and 'chrome/' not in ua_string:
-        browser = 'Safari'
-    elif 'msie' in ua_lower or 'trident/' in ua_lower:
-        browser = 'Internet Explorer'
-    else:
-        browser = 'Other'
         
     return {
         'device': device,
@@ -373,6 +446,11 @@ def resolve_geo_for_visit(visit_id, ip, app_instance):
                     visit.country_code = geo.get('country_code', 'XX')
                     visit.city = geo.get('city', 'Unknown')
                     visit.isp = geo.get('isp', '')
+                    # Re-check bot status with resolved ISP
+                    ua_check = parse_user_agent(visit.user_agent, path=visit.path, isp=visit.isp)
+                    if ua_check['is_bot']:
+                        visit.is_bot = True
+                        visit.device_type = ua_check['device']
                     db.session.commit()
             except Exception:
                 db.session.rollback()
@@ -398,6 +476,10 @@ def resolve_geo_for_visit(visit_id, ip, app_instance):
                         visit.country_code = geo['country_code']
                         visit.city = geo['city']
                         visit.isp = geo['isp']
+                        ua_check = parse_user_agent(visit.user_agent, path=visit.path, isp=visit.isp)
+                        if ua_check['is_bot']:
+                            visit.is_bot = True
+                            visit.device_type = ua_check['device']
                         db.session.commit()
                 return
     except Exception:
@@ -422,6 +504,10 @@ def resolve_geo_for_visit(visit_id, ip, app_instance):
                     visit.country_code = geo['country_code']
                     visit.city = geo['city']
                     visit.isp = geo['isp']
+                    ua_check = parse_user_agent(visit.user_agent, path=visit.path, isp=visit.isp)
+                    if ua_check['is_bot']:
+                        visit.is_bot = True
+                        visit.device_type = ua_check['device']
                     db.session.commit()
     except Exception:
         pass
@@ -435,32 +521,74 @@ def get_page_title(path):
         return f'Demo: {slug}' if slug else 'Demo Site'
     elif path == '/download_resume':
         return 'Download Resume PDF'
-    elif path == '/api/portfolio':
-        return 'Portfolio API'
     return path
+
+def reclassify_existing_visits():
+    """Re-analyzes all existing records in database and flags bots, scrapers, and exploit attempts."""
+    try:
+        visits = PageVisit.query.all()
+        updated = 0
+        for v in visits:
+            path_lower = (v.path or '').lower()
+            
+            # Check if this was an asset, API, manifest, or exploit path
+            is_exploit_or_asset = (
+                any(path_lower.endswith(ext) for ext in EXPLOIT_EXTENSIONS) or
+                any(sub in path_lower for sub in EXPLOIT_PATH_SUBSTRINGS) or
+                path_lower.startswith(('/api/', '/site.webmanifest', '/robots.txt', '/sitemap', '/favicon'))
+            )
+            
+            ua_info = parse_user_agent(v.user_agent, path=v.path, isp=v.isp)
+            
+            should_be_bot = ua_info['is_bot'] or is_exploit_or_asset or (v.browser == 'Other')
+            
+            if v.is_bot != should_be_bot or v.device_type != ua_info['device'] or v.browser != ua_info['browser']:
+                v.is_bot = should_be_bot
+                v.device_type = ua_info['device']
+                v.browser = ua_info['browser']
+                v.os = ua_info['os']
+                updated += 1
+                
+        db.session.commit()
+        return updated
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error during reclassification: {e}")
+        return 0
 
 # --- Visitor Tracking Middleware ---
 @app.before_request
 def track_visitor():
     path = request.path
     
-    # Ignore static files, uploads, admin routes, and auth routes
+    # 1. Ignore static files, uploads, admin routes, auth routes, and API endpoints
     if (path.startswith('/static') or 
         path.startswith('/assets') or 
         path.startswith('/admin') or 
         path.startswith('/login') or 
         path.startswith('/logout') or 
-        path.endswith(('.ico', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.css', '.js', '.map', '.woff', '.woff2', '.ttf', '.webp', '.mp4'))):
+        path.startswith('/api/') or 
+        path.startswith('/favicon') or
+        path.startswith('/site.webmanifest') or
+        path.startswith('/robots.txt') or
+        path.startswith('/sitemap') or
+        path.endswith(('.ico', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.css', '.js', '.map', '.woff', '.woff2', '.ttf', '.webp', '.mp4', '.json', '.xml', '.txt', '.webmanifest'))):
         return
     
-    # Don't track if the logged-in admin is browsing
+    # 2. Don't track if the logged-in admin is browsing
     if current_user.is_authenticated and path.startswith('/admin'):
         return
+
+    # 3. Only track legitimate public web pages
+    is_valid_page = (
+        path in ('/', '') or 
+        path == '/download_resume' or 
+        path.startswith('/demo/')
+    )
 
     try:
         ip = get_client_ip()
         ua_string = request.headers.get('User-Agent', '')
-        ua_info = parse_user_agent(ua_string)
         
         # Check Cloudflare Country Header
         cf_country = request.headers.get('CF-IPCountry')
@@ -482,7 +610,13 @@ def track_visitor():
         elif cf_country and cf_country != 'XX':
             initial_code = cf_country
             initial_country = cf_country
-            
+
+        ua_info = parse_user_agent(ua_string, path=path, isp=initial_isp)
+        
+        # If it's an exploit probe or non-existent path, force bot
+        if not is_valid_page:
+            ua_info['is_bot'] = True
+
         ref = request.referrer or request.args.get('ref') or request.args.get('utm_source') or ''
         ref_info = parse_referrer(ref)
         
@@ -845,13 +979,14 @@ def admin_analytics():
             )
         )
         
-    # Global KPIs
-    all_time_views = PageVisit.query.count()
-    all_time_unique = db.session.query(func.count(distinct(PageVisit.visitor_hash))).scalar() or 0
-    today_views = PageVisit.query.filter(PageVisit.timestamp >= today_start).count()
-    today_unique = db.session.query(func.count(distinct(PageVisit.visitor_hash))).filter(PageVisit.timestamp >= today_start).scalar() or 0
+    # Global Verified Human KPIs
+    all_time_human_views = PageVisit.query.filter_by(is_bot=False).count()
+    all_time_human_unique = db.session.query(func.count(distinct(PageVisit.visitor_hash))).filter(PageVisit.is_bot == False).scalar() or 0
+    today_human_views = PageVisit.query.filter(PageVisit.timestamp >= today_start, PageVisit.is_bot == False).count()
+    today_human_unique = db.session.query(func.count(distinct(PageVisit.visitor_hash))).filter(PageVisit.timestamp >= today_start, PageVisit.is_bot == False).scalar() or 0
+    total_bot_attacks = PageVisit.query.filter_by(is_bot=True).count()
     
-    # Filtered KPI metrics
+    # Filtered KPI metrics for current view
     filtered_views = base_query.count()
     filtered_unique = base_query.with_entities(func.count(distinct(PageVisit.visitor_hash))).scalar() or 0
     
@@ -899,12 +1034,22 @@ def admin_analytics():
     chart_views = []
     chart_uniques = []
     
+    is_bot_chart_filter = (PageVisit.is_bot == False) if bot_filter == '0' else ((PageVisit.is_bot == True) if bot_filter == '1' else None)
+    
     if time_range == 'today':
         for h in range(24):
             h_start = today_start + datetime.timedelta(hours=h)
             h_end = h_start + datetime.timedelta(hours=1)
-            h_views = PageVisit.query.filter(PageVisit.timestamp >= h_start, PageVisit.timestamp < h_end, PageVisit.is_bot == False).count()
-            h_unique = db.session.query(func.count(distinct(PageVisit.visitor_hash))).filter(PageVisit.timestamp >= h_start, PageVisit.timestamp < h_end, PageVisit.is_bot == False).scalar() or 0
+            q = PageVisit.query.filter(PageVisit.timestamp >= h_start, PageVisit.timestamp < h_end)
+            if is_bot_chart_filter is not None:
+                q = q.filter(is_bot_chart_filter)
+            h_views = q.count()
+            
+            uq = db.session.query(func.count(distinct(PageVisit.visitor_hash))).filter(PageVisit.timestamp >= h_start, PageVisit.timestamp < h_end)
+            if is_bot_chart_filter is not None:
+                uq = uq.filter(is_bot_chart_filter)
+            h_unique = uq.scalar() or 0
+            
             chart_labels.append(f"{h:02d}:00")
             chart_views.append(h_views)
             chart_uniques.append(h_unique)
@@ -914,8 +1059,15 @@ def admin_analytics():
             d_start = datetime.datetime.combine(day_date, datetime.time.min)
             d_end = datetime.datetime.combine(day_date, datetime.time.max)
             
-            d_views = PageVisit.query.filter(PageVisit.timestamp >= d_start, PageVisit.timestamp <= d_end, PageVisit.is_bot == False).count()
-            d_unique = db.session.query(func.count(distinct(PageVisit.visitor_hash))).filter(PageVisit.timestamp >= d_start, PageVisit.timestamp <= d_end, PageVisit.is_bot == False).scalar() or 0
+            q = PageVisit.query.filter(PageVisit.timestamp >= d_start, PageVisit.timestamp <= d_end)
+            if is_bot_chart_filter is not None:
+                q = q.filter(is_bot_chart_filter)
+            d_views = q.count()
+            
+            uq = db.session.query(func.count(distinct(PageVisit.visitor_hash))).filter(PageVisit.timestamp >= d_start, PageVisit.timestamp <= d_end)
+            if is_bot_chart_filter is not None:
+                uq = uq.filter(is_bot_chart_filter)
+            d_unique = uq.scalar() or 0
             
             chart_labels.append(day_date.strftime('%b %d'))
             chart_views.append(d_views)
@@ -926,10 +1078,11 @@ def admin_analytics():
     
     return render_template(
         'admin_analytics.html',
-        all_time_views=all_time_views,
-        all_time_unique=all_time_unique,
-        today_views=today_views,
-        today_unique=today_unique,
+        all_time_views=all_time_human_views,
+        all_time_unique=all_time_human_unique,
+        today_views=today_human_views,
+        today_unique=today_human_unique,
+        total_bot_attacks=total_bot_attacks,
         filtered_views=filtered_views,
         filtered_unique=filtered_unique,
         top_pages=top_pages,
@@ -947,6 +1100,17 @@ def admin_analytics():
         search_query=search_query,
         bot_filter=bot_filter
     )
+
+@app.route('/admin/analytics/reclassify', methods=['POST'])
+@login_required
+def reclassify_analytics():
+    try:
+        count = reclassify_existing_visits()
+        flash(f'Successfully re-analyzed and cleaned {count} visitor records. Bot and scanner traffic is now filtered!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error re-classifying records: {str(e)}', 'danger')
+    return redirect(url_for('admin_analytics'))
 
 @app.route('/admin/analytics/export')
 @login_required
@@ -1823,6 +1987,14 @@ def run_async_indexing(app_instance):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        # Clean & re-classify existing visits to ensure bot/scanner traffic is filtered
+        try:
+            cleaned = reclassify_existing_visits()
+            if cleaned > 0:
+                print(f"Analytics: Automatically re-classified {cleaned} historical visitor records.")
+        except Exception as e:
+            print(f"Analytics reclassification skipped: {e}")
+
         # Create default admin if not exists
         if not Admin.query.filter_by(username='admin').first():
             # Hash the default password for security
