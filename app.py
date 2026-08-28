@@ -1542,10 +1542,17 @@ def edit_project(id):
         return redirect(url_for('admin_projects_list'))
     return render_template('admin_edit_project.html', project=project)
 
-@app.route('/admin/project/delete/<int:id>', methods=['POST'])
+@app.route('/admin/project/delete/<int:id>', methods=['GET', 'POST'])
 @login_required
 def delete_project(id):
     project = Project.query.get_or_404(id)
+    if project.media_file:
+        try:
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], project.media_file)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception:
+            pass
     db.session.delete(project)
     db.session.commit()
     flash('Project deleted successfully.', 'success')
@@ -1969,7 +1976,7 @@ def edit_demo(id):
         
     return render_template('admin_edit_demo.html', demo=demo)
 
-@app.route('/admin/demos/delete/<int:id>', methods=['POST'])
+@app.route('/admin/demos/delete/<int:id>', methods=['GET', 'POST'])
 @login_required
 def delete_demo(id):
     demo = DemoSite.query.get_or_404(id)
