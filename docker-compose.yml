@@ -8,6 +8,9 @@ services:
       - ./static/uploads:/app/static/uploads
       - ./static/demos:/app/static/demos
       - ./instance:/app/instance
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+      - /var/run/fail2ban:/var/run/fail2ban:ro
     environment:
       - FLASK_ENV=production
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}

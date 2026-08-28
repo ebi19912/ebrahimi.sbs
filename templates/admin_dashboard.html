@@ -38,6 +38,9 @@
         <div class="container">
             <span class="navbar-brand mb-0 h1 fw-bold"><i class="bi bi-shield-lock"></i> Admin Panel</span>
             <div>
+                <a href="{{ url_for('admin_server') }}" class="btn btn-danger btn-sm me-2 fw-bold text-white shadow-sm">
+                    <i class="bi bi-shield-shaded"></i> Server & Security
+                </a>
                 <a href="{{ url_for('admin_analytics') }}" class="btn btn-primary btn-sm me-2 fw-bold">
                     <i class="bi bi-graph-up-arrow"></i> Analytics
                 </a>
@@ -78,6 +81,16 @@
         </div>
 
         <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <a href="{{ url_for('admin_server') }}" class="text-decoration-none text-dark">
+                    <div class="card shadow-sm card-box p-4 border border-danger-subtle" style="background: linear-gradient(135deg, #ffffff 0%, #fff5f5 100%);">
+                        <i class="bi bi-shield-shaded icon-big text-danger"></i>
+                        <h5 class="fw-bold">Server & Security 🛡️</h5>
+                        <p class="small text-muted mb-0">Fail2ban, CPU/RAM, Docker & UFW</p>
+                    </div>
+                </a>
+            </div>
+
             <div class="col-md-4">
                 <a href="{{ url_for('admin_analytics') }}" class="text-decoration-none text-dark">
                     <div class="card shadow-sm card-box p-4 border border-primary-subtle" style="background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);">

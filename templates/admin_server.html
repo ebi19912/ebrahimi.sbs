@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server & Security Management Center</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bs-body-bg: #f4f7f6;
+        }
+        body {
+            background-color: var(--bs-body-bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #2c3e50;
+        }
+        .navbar-custom {
+            background-color: #1a1d20;
+            padding: 15px 0;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            border: none;
+            border-radius: 16px;
+            background: #ffffff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+            transition: all 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        .content-card {
+            border: none;
+            border-radius: 16px;
+            background: #ffffff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+        }
+        .nav-pills .nav-link {
+            border-radius: 12px;
+            padding: 10px 18px;
+            font-weight: 600;
+            color: #495057;
+            transition: all 0.2s ease;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #0d6efd;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+        }
+        .nav-pills .nav-link:hover:not(.active) {
+            background-color: #e9ecef;
+            color: #212529;
+        }
+        .terminal-box {
+            background-color: #15181c;
+            color: #a9b7c6;
+            font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.85rem;
+            border-radius: 12px;
+            padding: 15px;
+            height: 450px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+        .terminal-line-err { color: #ff6b6b; font-weight: bold; }
+        .terminal-line-warn { color: #ffd166; }
+        .terminal-line-info { color: #06d6a0; }
+        .progress-slim { height: 8px; border-radius: 4px; }
+        .copy-btn { cursor: pointer; opacity: 0.7; transition: opacity 0.2s; }
+        .copy-btn:hover { opacity: 1; }
+        .badge-ip { font-family: monospace; font-size: 0.85rem; letter-spacing: 0.5px; }
+        .table > :not(caption) > * > * { padding: 0.85rem 1rem; vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark navbar-custom shadow-sm sticky-top">
+        <div class="container">
+            <a href="{{ url_for('admin_dashboard') }}" class="navbar-brand mb-0 h1 fw-bold text-white d-flex align-items-center">
+                <i class="bi bi-shield-shaded me-2 text-primary"></i>
+                <span>Server & Security Center</span>
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <div class="form-check form-switch text-white small d-none d-md-flex align-items-center me-2">
+                    <input class="form-check-input me-1" type="checkbox" id="liveAutoRefresh" checked>
+                    <label class="form-check-label text-light" for="liveAutoRefresh">Live Monitor (3s)</label>
+                </div>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm fw-bold">
+                    <i class="bi bi-grid-fill me-1"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin_analytics') }}" class="btn btn-outline-primary btn-sm fw-bold text-white">
+                    <i class="bi bi-graph-up-arrow me-1"></i> Analytics
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger btn-sm fw-bold">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show rounded-4 mb-4" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- Server System Info Banner -->
+        <div class="content-card p-3 mb-4">
+            <div class="row align-items-center g-3">
+                <div class="col-12 col-md-auto d-flex align-items-center">
+                    <div class="stat-icon bg-dark text-white me-3">
+                        <i class="bi bi-hdd-rack-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark" id="serverHostname">{{ system_info.hostname }}</h5>
+                        <small class="text-muted" id="serverOsInfo">{{ system_info.os_info }}</small>
+                    </div>
+                </div>
+                <div class="col-12 col-md d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle py-2 px-3">
+                        <i class="bi bi-clock-history me-1"></i> Uptime: <strong id="serverUptime">{{ system_info.uptime_human }}</strong>
+                    </span>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle py-2 px-3">
+                        <i class="bi bi-cpu me-1"></i> Cores: <strong>{{ system_info.cpu.cores_logical }}</strong>
+                    </span>
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle py-2 px-3">
+                        <i class="bi bi-terminal me-1"></i> Python: <strong>{{ system_info.python_version }}</strong>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-pills mb-4 gap-2 flex-wrap" id="serverTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active d-flex align-items-center" id="resources-tab" data-bs-toggle="pill" data-bs-target="#tab-resources" type="button" role="tab">
+                    <i class="bi bi-speedometer2 me-2"></i> System Resources
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link d-flex align-items-center" id="fail2ban-tab" data-bs-toggle="pill" data-bs-target="#tab-fail2ban" type="button" role="tab">
+                    <i class="bi bi-shield-lock-fill me-2"></i> Fail2ban & IP Bans
+                    <span class="badge bg-danger ms-2" id="fail2banBadgeCount">{{ fail2ban_status.total_banned }}</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link d-flex align-items-center" id="firewall-tab" data-bs-toggle="pill" data-bs-target="#tab-firewall" type="button" role="tab">
+                    <i class="bi bi-bricks me-2"></i> Firewall (UFW)
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link d-flex align-items-center" id="docker-tab" data-bs-toggle="pill" data-bs-target="#tab-docker" type="button" role="tab">
+                    <i class="bi bi-box-seam-fill me-2"></i> Docker Containers
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link d-flex align-items-center" id="logs-tab" data-bs-toggle="pill" data-bs-target="#tab-logs" type="button" role="tab">
+                    <i class="bi bi-file-text-fill me-2"></i> System Logs
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Contents -->
+        <div class="tab-content" id="serverTabsContent">
+            
+            <!-- ============================================== -->
+            <!-- TAB 1: SYSTEM RESOURCES (CPU, RAM, DISK, NET)   -->
+            <!-- ============================================== -->
+            <div class="tab-pane fade show active" id="tab-resources" role="tabpanel">
+                <!-- 4 Top Resource Metric Cards -->
+                <div class="row g-3 mb-4">
+                    <!-- CPU Usage -->
+                    <div class="col-6 col-lg-3">
+                        <div class="stat-card p-3 p-md-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="text-muted small fw-semibold text-uppercase">CPU Load</span>
+                                    <h3 class="fw-bold mt-1 mb-0 text-primary" id="cardCpuPercent">{{ system_info.cpu.percent }}%</h3>
+                                    <small class="text-muted" id="cardCpuCores">{{ system_info.cpu.cores_logical }} Cores @ {{ system_info.cpu.freq_mhz }} MHz</small>
+                                </div>
+                                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                                    <i class="bi bi-cpu-fill"></i>
+                                </div>
+                            </div>
+                            <div class="progress progress-slim bg-light mt-3">
+                                <div id="cardCpuBar" class="progress-bar bg-primary" role="progressbar" style="width: {{ system_info.cpu.percent }}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RAM Memory -->
+                    <div class="col-6 col-lg-3">
+                        <div class="stat-card p-3 p-md-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="text-muted small fw-semibold text-uppercase">RAM Memory</span>
+                                    <h3 class="fw-bold mt-1 mb-0 text-success" id="cardRamPercent">{{ system_info.ram.percent }}%</h3>
+                                    <small class="text-muted" id="cardRamDetails">{{ system_info.ram.used_gb }} / {{ system_info.ram.total_gb }} GB</small>
+                                </div>
+                                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                                    <i class="bi bi-memory"></i>
+                                </div>
+                            </div>
+                            <div class="progress progress-slim bg-light mt-3">
+                                <div id="cardRamBar" class="progress-bar bg-success" role="progressbar" style="width: {{ system_info.ram.percent }}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Primary Storage -->
+                    <div class="col-6 col-lg-3">
+                        <div class="stat-card p-3 p-md-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="text-muted small fw-semibold text-uppercase">Disk Storage</span>
+                                    <h3 class="fw-bold mt-1 mb-0 text-warning" id="cardDiskPercent">{{ system_info.disk.primary_percent }}%</h3>
+                                    <small class="text-muted" id="cardDiskDetails">{{ system_info.disk.used_gb }} / {{ system_info.disk.total_gb }} GB</small>
+                                </div>
+                                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                                    <i class="bi bi-device-hdd-fill"></i>
+                                </div>
+                            </div>
+                            <div class="progress progress-slim bg-light mt-3">
+                                <div id="cardDiskBar" class="progress-bar bg-warning" role="progressbar" style="width: {{ system_info.disk.primary_percent }}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Network Speed -->
+                    <div class="col-6 col-lg-3">
+                        <div class="stat-card p-3 p-md-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="text-muted small fw-semibold text-uppercase">Network I/O</span>
+                                    <h5 class="fw-bold mt-1 mb-0 text-info" id="cardNetSpeeds">
+                                        <i class="bi bi-arrow-down small"></i> <span id="cardNetDown">{{ system_info.network.download_speed_kb }}</span> KB/s
+                                    </h5>
+                                    <small class="text-muted">
+                                        <i class="bi bi-arrow-up small"></i> <span id="cardNetUp">{{ system_info.network.upload_speed_kb }}</span> KB/s
+                                    </small>
+                                </div>
+                                <div class="stat-icon bg-info bg-opacity-10 text-info">
+                                    <i class="bi bi-activity"></i>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-2" style="font-size: 0.72rem;">
+                                Total: {{ system_info.network.recv_mb }} MB in / {{ system_info.network.sent_mb }} MB out
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row: CPU Live History & Memory Breakdown -->
+                <div class="row g-4 mb-4">
+                    <!-- CPU Timeline Chart -->
+                    <div class="col-12 col-lg-8">
+                        <div class="content-card p-4 h-100">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold mb-0 text-dark d-flex align-items-center">
+                                    <i class="bi bi-graph-up text-primary me-2"></i> Real-time CPU Usage (%)
+                                </h6>
+                                <span class="badge bg-light text-dark border" id="loadAvgText">
+                                    Load Avg: {{ system_info.cpu.load_avg[0] }}, {{ system_info.cpu.load_avg[1] }}, {{ system_info.cpu.load_avg[2] }}
+                                </span>
+                            </div>
+                            <div style="position: relative; height: 260px;">
+                                <canvas id="cpuRealtimeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Per-Core & Swap Breakdown -->
+                    <div class="col-12 col-lg-4">
+                        <div class="content-card p-4 h-100">
+                            <h6 class="fw-bold mb-3 text-dark d-flex align-items-center">
+                                <i class="bi bi-pie-chart-fill text-success me-2"></i> Memory & Cores Breakdown
+                            </h6>
+                            
+                            <!-- RAM Breakdown -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="text-muted fw-semibold">Virtual Memory</span>
+                                    <span class="fw-bold text-dark" id="ramDetailText">{{ system_info.ram.used_gb }} GB / {{ system_info.ram.total_gb }} GB</span>
+                                </div>
+                                <div class="progress progress-slim bg-light">
+                                    <div id="ramBarMini" class="progress-bar bg-success" role="progressbar" style="width: {{ system_info.ram.percent }}%;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Swap Breakdown -->
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="text-muted fw-semibold">Swap Memory</span>
+                                    <span class="fw-bold text-dark" id="swapDetailText">{{ system_info.swap.used_gb }} GB / {{ system_info.swap.total_gb }} GB</span>
+                                </div>
+                                <div class="progress progress-slim bg-light">
+                                    <div id="swapBarMini" class="progress-bar bg-warning" role="progressbar" style="width: {{ system_info.swap.percent }}%;"></div>
+                                </div>
+                            </div>
+
+                            <hr class="my-3">
+
+                            <!-- Per-Core CPU usage list -->
+                            <span class="text-muted small fw-semibold d-block mb-2">Per-Core CPU Utilisation</span>
+                            <div id="perCoreContainer" class="d-flex flex-column gap-2">
+                                {% for core_pct in system_info.cpu.per_cpu %}
+                                    <div>
+                                        <div class="d-flex justify-content-between small mb-1">
+                                            <span class="text-muted">Core #{{ loop.index0 }}</span>
+                                            <span class="fw-bold text-dark">{{ core_pct }}%</span>
+                                        </div>
+                                        <div class="progress progress-slim bg-light">
+                                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ core_pct }}%;"></div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Disk Partitions Table -->
+                <div class="content-card p-4">
+                    <h6 class="fw-bold mb-3 text-dark d-flex align-items-center">
+                        <i class="bi bi-hdd-network-fill text-warning me-2"></i> Disk Partitions & Mount Points
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mount Point</th>
+                                    <th>Device / Filesystem</th>
+                                    <th>Type</th>
+                                    <th>Total Space</th>
+                                    <th>Used</th>
+                                    <th>Free Space</th>
+                                    <th style="width: 200px;">Usage %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="partitionsTableBody">
+                                {% for p in system_info.disk.partitions %}
+                                    <tr>
+                                        <td><span class="badge bg-light text-dark border">{{ p.mountpoint }}</span></td>
+                                        <td class="small text-muted">{{ p.device }}</td>
+                                        <td><span class="badge bg-secondary bg-opacity-10 text-secondary">{{ p.fstype }}</span></td>
+                                        <td class="fw-semibold">{{ p.total_gb }} GB</td>
+                                        <td class="text-danger fw-semibold">{{ p.used_gb }} GB</td>
+                                        <td class="text-success fw-semibold">{{ p.free_gb }} GB</td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress progress-slim flex-grow-1 bg-light">
+                                                    <div class="progress-bar {% if p.percent > 85 %}bg-danger{% elif p.percent > 70 %}bg-warning{% else %}bg-success{% endif %}" 
+                                                         role="progressbar" style="width: {{ p.percent }}%;"></div>
+                                                </div>
+                                                <span class="small fw-bold">{{ p.percent }}%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- TAB 2: FAIL2BAN & IP PROTECTION               -->
+            <!-- ============================================== -->
+            <div class="tab-pane fade" id="tab-fail2ban" role="tabpanel">
+                <div class="row g-4 mb-4">
+                    <!-- Fail2ban Status & Jails -->
+                    <div class="col-12 col-lg-8">
+                        <div class="content-card p-4 h-100">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                                <div>
+                                    <h5 class="fw-bold mb-1 text-dark d-flex align-items-center">
+                                        <i class="bi bi-shield-fill-check text-success me-2"></i> Fail2ban Protection Status
+                                    </h5>
+                                    <small class="text-muted">Intrusion Prevention & Automated Jail Monitoring</small>
+                                </div>
+                                <div>
+                                    {% if fail2ban_status.running %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle py-2 px-3">
+                                            <i class="bi bi-check-circle-fill me-1"></i> Service Active & Protecting
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle py-2 px-3">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ fail2ban_status.error or 'Inactive / Not Installed' }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <hr class="my-3">
+
+                            <!-- Active Jails Grid -->
+                            <h6 class="fw-bold text-dark mb-3">Active Jails (فیلترهای حفاظتی)</h6>
+                            {% if fail2ban_status.jails %}
+                                <div class="row g-3">
+                                    {% for j in fail2ban_status.jails %}
+                                        <div class="col-12 col-md-6 col-xl-4">
+                                            <div class="border rounded-3 p-3 bg-light bg-opacity-50">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="fw-bold text-dark"><i class="bi bi-shield-lock text-primary me-1"></i> {{ j.name }}</span>
+                                                    <span class="badge bg-danger">{{ j.currently_banned }} banned</span>
+                                                </div>
+                                                <div class="text-muted small">Total Banned: <strong>{{ j.total_banned }}</strong></div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="alert alert-secondary mb-0 rounded-3">
+                                    <i class="bi bi-info-circle me-1"></i> No active jails detected or Fail2ban is in development mode.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Manual IP Ban Form -->
+                    <div class="col-12 col-lg-4">
+                        <div class="content-card p-4 h-100">
+                            <h6 class="fw-bold mb-3 text-dark d-flex align-items-center">
+                                <i class="bi bi-slash-circle-fill text-danger me-2"></i> Manual IP Ban
+                            </h6>
+                            <p class="small text-muted mb-3">Manually block an attacker IP address across Fail2ban jails.</p>
+                            
+                            <form id="manualBanForm" onsubmit="handleManualBan(event)">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-muted">IP Address to Block</label>
+                                    <input type="text" id="banIpInput" class="form-control" placeholder="e.g. 194.26.29.112" required pattern="^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-muted">Target Jail</label>
+                                    <select id="banJailSelect" class="form-select">
+                                        {% if fail2ban_status.jail_names %}
+                                            {% for j in fail2ban_status.jail_names %}
+                                                <option value="{{ j }}">{{ j }}</option>
+                                            {% endfor %}
+                                        {% else %}
+                                            <option value="sshd">sshd</option>
+                                            <option value="nginx-botsearch">nginx-botsearch</option>
+                                        {% endif %}
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-danger w-100 fw-bold shadow-sm" id="btnSubmitBan">
+                                    <i class="bi bi-ban me-1"></i> Block IP Address
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Currently Banned IPs Table -->
+                <div class="content-card p-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                        <div>
+                            <h5 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-list-check text-danger me-2"></i> Currently Banned IP Addresses
+                            </h5>
+                            <small class="text-muted">Blocked connections by automated rules or manual ban</small>
+                        </div>
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle py-2 px-3 fw-bold" id="bannedCountBadge">
+                            {{ banned_ips|length }} Blocked IPs
+                        </span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="bannedIpsTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 220px;">IP Address</th>
+                                    <th>Jail Name</th>
+                                    <th>Status</th>
+                                    <th style="width: 140px;" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if banned_ips %}
+                                    {% for b in banned_ips %}
+                                        <tr id="banned-row-{{ loop.index }}">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <span class="badge bg-light text-dark border badge-ip">{{ b.ip }}</span>
+                                                    <i class="bi bi-clipboard ms-2 copy-btn text-muted small" onclick="copyToClipboard('{{ b.ip }}')" title="Copy IP"></i>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border">{{ b.jail }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">
+                                                    <i class="bi bi-lock-fill me-1"></i> Banned / Blocked
+                                                </span>
+                                            </td>
+                                            <td class="text-end">
+                                                <button class="btn btn-outline-success btn-sm fw-bold" onclick="handleUnbanIp('{{ b.ip }}', '{{ b.jail }}', 'banned-row-{{ loop.index }}')">
+                                                    <i class="bi bi-unlock-fill me-1"></i> Unban
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-muted">
+                                            <i class="bi bi-shield-check fs-2 text-success d-block mb-2"></i>
+                                            <span>No active IP bans currently recorded. System is clean and safe.</span>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- TAB 3: FIREWALL (UFW)                          -->
+            <!-- ============================================== -->
+            <div class="tab-pane fade" id="tab-firewall" role="tabpanel">
+                <div class="content-card p-4 mb-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark d-flex align-items-center">
+                                <i class="bi bi-bricks text-warning me-2"></i> UFW Firewall Rules
+                            </h5>
+                            <small class="text-muted">Port access management, incoming traffic filters</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if firewall_status.active %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle py-2 px-3">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Firewall Active
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border py-2 px-3">
+                                    <i class="bi bi-pause-circle-fill me-1"></i> {{ firewall_status.error or 'Firewall Inactive' }}
+                                </span>
+                            {% endif %}
+                            <button class="btn btn-primary btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addRuleModal">
+                                <i class="bi bi-plus-lg me-1"></i> Add Rule
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 70px;">#</th>
+                                    <th>Port / Service</th>
+                                    <th>Action</th>
+                                    <th>From Source</th>
+                                    <th style="width: 100px;" class="text-end">Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if firewall_status.rules %}
+                                    {% for r in firewall_status.rules %}
+                                        <tr>
+                                            <td><strong>{{ r.number }}</strong></td>
+                                            <td><span class="badge bg-light text-dark border">{{ r.to }}</span></td>
+                                            <td>
+                                                {% if r.action == 'ALLOW' %}
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle">ALLOW</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">DENY</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><span class="text-muted">{{ r.from }}</span></td>
+                                            <td class="text-end">
+                                                <button class="btn btn-outline-danger btn-sm" onclick="handleDeleteRule('{{ r.number }}')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">
+                                            <i class="bi bi-bricks fs-2 d-block mb-2 text-secondary"></i>
+                                            <span>No custom firewall rules configured or UFW inactive.</span>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- TAB 4: DOCKER CONTAINERS                       -->
+            <!-- ============================================== -->
+            <div class="tab-pane fade" id="tab-docker" role="tabpanel">
+                <div class="content-card p-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                        <div>
+                            <h5 class="fw-bold mb-1 text-dark d-flex align-items-center">
+                                <i class="bi bi-box-seam-fill text-primary me-2"></i> Docker Containers
+                            </h5>
+                            <small class="text-muted">Live containers, service status and control</small>
+                        </div>
+                        <div>
+                            {% if docker_status.available %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle py-2 px-3">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Docker Engine Online
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border py-2 px-3">
+                                    <i class="bi bi-info-circle me-1"></i> {{ docker_status.error or 'Docker Daemon Not Found' }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Container Name</th>
+                                    <th>Image</th>
+                                    <th>Status</th>
+                                    <th>Port Mappings</th>
+                                    <th style="width: 220px;" class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if docker_status.containers %}
+                                    {% for c in docker_status.containers %}
+                                        <tr>
+                                            <td>
+                                                <strong class="text-dark">{{ c.name }}</strong>
+                                                <div class="text-muted small" style="font-size: 0.72rem;">ID: {{ c.id }}</div>
+                                            </td>
+                                            <td><span class="badge bg-light text-dark border">{{ c.image }}</span></td>
+                                            <td>
+                                                {% if c.state == 'running' %}
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle">
+                                                        <i class="bi bi-play-fill"></i> Running
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle">
+                                                        <i class="bi bi-stop-fill"></i> {{ c.status }}
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td><small class="text-muted">{{ c.ports }}</small></td>
+                                            <td class="text-end">
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" onclick="handleDockerAction('{{ c.full_id }}', 'restart')" title="Restart Container">
+                                                        <i class="bi bi-arrow-clockwise"></i>
+                                                    </button>
+                                                    {% if c.state == 'running' %}
+                                                        <button class="btn btn-outline-danger" onclick="handleDockerAction('{{ c.full_id }}', 'stop')" title="Stop Container">
+                                                            <i class="bi bi-stop-fill"></i>
+                                                        </button>
+                                                    {% else %}
+                                                        <button class="btn btn-outline-success" onclick="handleDockerAction('{{ c.full_id }}', 'start')" title="Start Container">
+                                                            <i class="bi bi-play-fill"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                    <button class="btn btn-outline-secondary" onclick="viewContainerLogs('{{ c.full_id }}', '{{ c.name }}')" title="View Logs">
+                                                        <i class="bi bi-file-text"></i> Logs
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">
+                                            <i class="bi bi-box-seam fs-2 d-block mb-2 text-secondary"></i>
+                                            <span>No containers found or running on this host.</span>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================== -->
+            <!-- TAB 5: SYSTEM & SERVICE LOGS                   -->
+            <!-- ============================================== -->
+            <div class="tab-pane fade" id="tab-logs" role="tabpanel">
+                <div class="content-card p-4">
+                    <div class="row g-3 align-items-center justify-content-between mb-3">
+                        <div class="col-12 col-md-auto">
+                            <h5 class="fw-bold mb-0 text-dark d-flex align-items-center">
+                                <i class="bi bi-file-earmark-text-fill text-info me-2"></i> System & Service Log Viewer
+                            </h5>
+                            <small class="text-muted">Real-time log inspection, search & level filtering</small>
+                        </div>
+                        
+                        <!-- Log Filter Controls -->
+                        <div class="col-12 col-md-auto d-flex flex-wrap gap-2 align-items-center">
+                            <!-- Source Select -->
+                            <div class="input-group input-group-sm" style="min-width: 170px;">
+                                <span class="input-group-text bg-light"><i class="bi bi-folder2-open"></i></span>
+                                <select id="logSourceSelect" class="form-select" onchange="fetchSystemLogs()">
+                                    <option value="fail2ban" selected>Fail2ban Log</option>
+                                    <option value="nginx_access">Nginx Access Log</option>
+                                    <option value="nginx_error">Nginx Error Log</option>
+                                    <option value="syslog">System Syslog</option>
+                                    <option value="auth">Auth & SSH Log</option>
+                                </select>
+                            </div>
+
+                            <!-- Level Select -->
+                            <select id="logLevelSelect" class="form-select form-select-sm" style="width: 100px;" onchange="fetchSystemLogs()">
+                                <option value="ALL" selected>All Levels</option>
+                                <option value="ERROR">Errors Only</option>
+                                <option value="WARN">Warnings</option>
+                                <option value="INFO">Info</option>
+                            </select>
+
+                            <!-- Lines Select -->
+                            <select id="logLinesSelect" class="form-select form-select-sm" style="width: 90px;" onchange="fetchSystemLogs()">
+                                <option value="50">50 lines</option>
+                                <option value="100" selected>100 lines</option>
+                                <option value="250">250 lines</option>
+                                <option value="500">500 lines</option>
+                            </select>
+
+                            <!-- Search Input -->
+                            <div class="input-group input-group-sm" style="min-width: 160px;">
+                                <input type="text" id="logSearchInput" class="form-control" placeholder="Search text..." onkeyup="if(event.key==='Enter') fetchSystemLogs()">
+                                <button class="btn btn-primary" onclick="fetchSystemLogs()"><i class="bi bi-search"></i></button>
+                            </div>
+
+                            <button class="btn btn-outline-secondary btn-sm" onclick="fetchSystemLogs()" title="Refresh Logs">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Terminal Output Box -->
+                    <div class="terminal-box" id="systemLogTerminal">Loading logs from server...</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal: Add Firewall Rule -->
+    <div class="modal fade" id="addRuleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-plus-circle text-primary me-2"></i> Add Firewall Rule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <form id="addFirewallRuleForm" onsubmit="handleAddRule(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Port Number / Service</label>
+                            <input type="text" id="rulePortInput" class="form-control" placeholder="e.g. 80, 443, 22, 3306" required>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Protocol</label>
+                                <select id="ruleProtoSelect" class="form-select">
+                                    <option value="tcp" selected>TCP</option>
+                                    <option value="udp">UDP</option>
+                                    <option value="any">Any (TCP/UDP)</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">Action</label>
+                                <select id="ruleActionSelect" class="form-select">
+                                    <option value="allow" selected>ALLOW (مجاز)</option>
+                                    <option value="deny">DENY (مسدود)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">From Source IP (Optional)</label>
+                            <input type="text" id="ruleFromInput" class="form-control" placeholder="any (Default) or specific IP">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">Add Rule to Firewall</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Docker Container Logs -->
+    <div class="modal fade" id="containerLogsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center">
+                        <i class="bi bi-terminal text-primary me-2"></i> Logs: <span id="modalContainerName" class="ms-1"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <div class="terminal-box" id="containerLogTerminal" style="height: 480px;">Loading container logs...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Chart.js Real-time CPU Chart
+        const ctxCpu = document.getElementById('cpuRealtimeChart').getContext('2d');
+        const maxDataPoints = 20;
+        const cpuLabels = Array.from({length: maxDataPoints}, (_, i) => '');
+        const cpuData = Array.from({length: maxDataPoints}, () => {{ system_info.cpu.percent }});
+
+        const cpuChart = new Chart(ctxCpu, {
+            type: 'line',
+            data: {
+                labels: cpuLabels,
+                datasets: [{
+                    label: 'CPU Usage %',
+                    data: cpuData,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.08)',
+                    borderWidth: 2.5,
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.04)' } },
+                    x: { grid: { display: false } }
+                },
+                plugins: { legend: { display: false } },
+                animation: { duration: 400 }
+            }
+        });
+
+        // Real-time Metrics Polling
+        async function fetchSystemStats() {
+            if (!document.getElementById('liveAutoRefresh').checked) return;
+            try {
+                const res = await fetch('/admin/api/server/system-stats');
+                if (res.ok) {
+                    const data = await res.json();
+                    // Update CPU
+                    document.getElementById('cardCpuPercent').innerText = data.cpu.percent + '%';
+                    document.getElementById('cardCpuBar').style.width = data.cpu.percent + '%';
+                    document.getElementById('loadAvgText').innerText = `Load Avg: ${data.cpu.load_avg[0]}, ${data.cpu.load_avg[1]}, ${data.cpu.load_avg[2]}`;
+                    
+                    // Update CPU Chart
+                    cpuChart.data.datasets[0].data.shift();
+                    cpuChart.data.datasets[0].data.push(data.cpu.percent);
+                    cpuChart.update();
+
+                    // Update RAM
+                    document.getElementById('cardRamPercent').innerText = data.ram.percent + '%';
+                    document.getElementById('cardRamBar').style.width = data.ram.percent + '%';
+                    document.getElementById('cardRamDetails').innerText = `${data.ram.used_gb} / ${data.ram.total_gb} GB`;
+                    document.getElementById('ramDetailText').innerText = `${data.ram.used_gb} GB / ${data.ram.total_gb} GB`;
+                    document.getElementById('ramBarMini').style.width = data.ram.percent + '%';
+
+                    // Update Swap
+                    document.getElementById('swapDetailText').innerText = `${data.swap.used_gb} GB / ${data.swap.total_gb} GB`;
+                    document.getElementById('swapBarMini').style.width = data.swap.percent + '%';
+
+                    // Update Network
+                    document.getElementById('cardNetDown').innerText = data.network.download_speed_kb;
+                    document.getElementById('cardNetUp').innerText = data.network.upload_speed_kb;
+
+                    // Update Uptime
+                    document.getElementById('serverUptime').innerText = data.uptime_human;
+                }
+            } catch (e) {
+                console.error("Failed to poll system stats", e);
+            }
+        }
+
+        setInterval(fetchSystemStats, 3000);
+
+        // Fail2ban Handlers
+        async function handleManualBan(e) {
+            e.preventDefault();
+            const ip = document.getElementById('banIpInput').value.trim();
+            const jail = document.getElementById('banJailSelect').value;
+            const btn = document.getElementById('btnSubmitBan');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Blocking...';
+
+            try {
+                const res = await fetch('/admin/api/server/fail2ban/ban', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ip: ip, jail: jail})
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) {
+                    location.reload();
+                }
+            } catch (err) {
+                alert('Error blocking IP: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-ban me-1"></i> Block IP Address';
+            }
+        }
+
+        async function handleUnbanIp(ip, jail, rowId) {
+            if (!confirm(`Are you sure you want to unban IP ${ip}?`)) return;
+
+            try {
+                const res = await fetch('/admin/api/server/fail2ban/unban', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ip: ip, jail: jail})
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) {
+                    const row = document.getElementById(rowId);
+                    if (row) row.remove();
+                }
+            } catch (err) {
+                alert('Error unbanning IP: ' + err.message);
+            }
+        }
+
+        // Firewall Handlers
+        async function handleAddRule(e) {
+            e.preventDefault();
+            const port = document.getElementById('rulePortInput').value.trim();
+            const proto = document.getElementById('ruleProtoSelect').value;
+            const action = document.getElementById('ruleActionSelect').value;
+            const from_ip = document.getElementById('ruleFromInput').value.trim() || 'any';
+
+            try {
+                const res = await fetch('/admin/api/server/firewall/add', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({port: port, protocol: proto, action: action, from_ip: from_ip})
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) location.reload();
+            } catch (err) {
+                alert('Error adding rule: ' + err.message);
+            }
+        }
+
+        async function handleDeleteRule(ruleNum) {
+            if (!confirm(`Delete firewall rule #${ruleNum}?`)) return;
+            try {
+                const res = await fetch('/admin/api/server/firewall/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({rule_number: ruleNum})
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) location.reload();
+            } catch (err) {
+                alert('Error deleting rule: ' + err.message);
+            }
+        }
+
+        // Docker Handlers
+        async function handleDockerAction(containerId, action) {
+            if (!confirm(`Are you sure you want to ${action} container ${containerId}?`)) return;
+            try {
+                const res = await fetch('/admin/api/server/docker/action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({container_id: containerId, action: action})
+                });
+                const result = await res.json();
+                alert(result.message);
+                if (result.success) location.reload();
+            } catch (err) {
+                alert('Error performing action: ' + err.message);
+            }
+        }
+
+        async function viewContainerLogs(containerId, name) {
+            document.getElementById('modalContainerName').innerText = name;
+            document.getElementById('containerLogTerminal').innerText = 'Loading logs...';
+            const modal = new bootstrap.Modal(document.getElementById('containerLogsModal'));
+            modal.show();
+
+            try {
+                const res = await fetch(`/admin/api/server/docker/logs/${containerId}`);
+                const data = await res.json();
+                document.getElementById('containerLogTerminal').innerText = data.logs || 'No log output available.';
+            } catch (err) {
+                document.getElementById('containerLogTerminal').innerText = 'Failed to load logs: ' + err.message;
+            }
+        }
+
+        // System Log Viewer
+        async function fetchSystemLogs() {
+            const source = document.getElementById('logSourceSelect').value;
+            const level = document.getElementById('logLevelSelect').value;
+            const lines = document.getElementById('logLinesSelect').value;
+            const search = document.getElementById('logSearchInput').value.trim();
+
+            const term = document.getElementById('systemLogTerminal');
+            term.innerText = 'Fetching logs...';
+
+            try {
+                const query = new URLSearchParams({source, level, lines, search});
+                const res = await fetch(`/admin/api/server/logs?${query.toString()}`);
+                const data = await res.json();
+                
+                if (data.lines && data.lines.length > 0) {
+                    term.innerHTML = data.lines.map(line => {
+                        let className = '';
+                        const lUpper = line.toUpperCase();
+                        if (lUpper.includes('ERROR') || lUpper.includes('BAN') || lUpper.includes('FAILED')) {
+                            className = 'terminal-line-err';
+                        } else if (lUpper.includes('WARN') || lUpper.includes('UNBAN')) {
+                            className = 'terminal-line-warn';
+                        } else if (lUpper.includes('INFO') || lUpper.includes('SUCCESS')) {
+                            className = 'terminal-line-info';
+                        }
+                        return `<div class="${className}">${escapeHtml(line)}</div>`;
+                    }).join('');
+                    term.scrollTop = term.scrollHeight;
+                } else {
+                    term.innerText = 'No matching log records found.';
+                }
+            } catch (err) {
+                term.innerText = 'Failed to retrieve logs: ' + err.message;
+            }
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard: ' + text);
+            });
+        }
+
+        // Initial fetch of logs on tab activate
+        document.getElementById('logs-tab').addEventListener('shown.bs.tab', fetchSystemLogs);
+    </script>
+</body>
+</html>

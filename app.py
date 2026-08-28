@@ -28,6 +28,15 @@ from models import db, Admin, Project, ResumeItem, Skill, Profile, AISettings, D
 # Import RAG utilities
 from rag_utils import initialize_vector_db, get_relevant_context
 
+# Import Server & Security utilities
+from server_utils import (
+    get_system_metrics,
+    Fail2banManager,
+    FirewallManager,
+    DockerManager,
+    LogManager
+)
+
 # Load environment variables
 load_dotenv()
 
@@ -1156,6 +1165,95 @@ def clear_analytics():
         db.session.rollback()
         flash(f'Error clearing logs: {str(e)}', 'danger')
     return redirect(url_for('admin_analytics'))
+
+# --- Server & Security Management Routes ---
+
+@app.route('/admin/server')
+@login_required
+def admin_server():
+    sys_metrics = get_system_metrics()
+    f2b_status = Fail2banManager.get_status()
+    banned_ips = Fail2banManager.get_all_banned_ips()
+    fw_status = FirewallManager.get_status()
+    docker_status = DockerManager.get_containers()
+    
+    return render_template(
+        'admin_server.html',
+        system_info=sys_metrics,
+        fail2ban_status=f2b_status,
+        banned_ips=banned_ips,
+        firewall_status=fw_status,
+        docker_status=docker_status
+    )
+
+@app.route('/admin/api/server/system-stats')
+@login_required
+def api_server_system_stats():
+    return jsonify(get_system_metrics())
+
+@app.route('/admin/api/server/fail2ban/ban', methods=['POST'])
+@login_required
+def api_fail2ban_ban():
+    data = request.get_json() or {}
+    ip = data.get('ip', '').strip()
+    jail = data.get('jail', '').strip() or None
+    result = Fail2banManager.ban_ip(ip, jail)
+    return jsonify(result)
+
+@app.route('/admin/api/server/fail2ban/unban', methods=['POST'])
+@login_required
+def api_fail2ban_unban():
+    data = request.get_json() or {}
+    ip = data.get('ip', '').strip()
+    jail = data.get('jail', '').strip() or None
+    result = Fail2banManager.unban_ip(ip, jail)
+    return jsonify(result)
+
+@app.route('/admin/api/server/firewall/add', methods=['POST'])
+@login_required
+def api_firewall_add():
+    data = request.get_json() or {}
+    port = data.get('port')
+    proto = data.get('protocol', 'tcp')
+    action = data.get('action', 'allow')
+    from_ip = data.get('from_ip', 'any')
+    result = FirewallManager.add_rule(port, proto, action, from_ip)
+    return jsonify(result)
+
+@app.route('/admin/api/server/firewall/delete', methods=['POST'])
+@login_required
+def api_firewall_delete():
+    data = request.get_json() or {}
+    rule_num = data.get('rule_number')
+    result = FirewallManager.delete_rule(rule_num)
+    return jsonify(result)
+
+@app.route('/admin/api/server/docker/action', methods=['POST'])
+@login_required
+def api_docker_action():
+    data = request.get_json() or {}
+    container_id = data.get('container_id')
+    action = data.get('action')
+    result = DockerManager.container_action(container_id, action)
+    return jsonify(result)
+
+@app.route('/admin/api/server/docker/logs/<container_id>')
+@login_required
+def api_docker_logs(container_id):
+    tail = int(request.args.get('tail', 100))
+    logs = DockerManager.get_container_logs(container_id, tail=tail)
+    return jsonify({'logs': logs})
+
+@app.route('/admin/api/server/logs')
+@login_required
+def api_server_logs():
+    source = request.args.get('source', 'fail2ban')
+    lines = int(request.args.get('lines', 100))
+    search = request.args.get('search', '').strip() or None
+    level = request.args.get('level', 'ALL').strip()
+    
+    logs = LogManager.read_log(log_type=source, lines=lines, search_query=search, level=level)
+    return jsonify({'lines': logs})
 
 @app.route('/admin/refresh-ai-knowledge')
 @login_required
