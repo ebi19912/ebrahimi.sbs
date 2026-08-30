@@ -66,6 +66,10 @@
                                 <input type="file" name="media_file" class="form-control" accept="image/*,video/*">
                                 <small class="text-muted">Optional cover image or video to display in the demos section.</small>
                             </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" role="switch" id="new_is_active" name="is_active" value="1" checked>
+                                <label class="form-check-label fw-semibold" for="new_is_active">Visible on website immediately</label>
+                            </div>
                             <button type="submit" class="btn btn-success w-100"><i class="bi bi-upload"></i> Upload & Deploy Demo</button>
                         </form>
                     </div>
@@ -87,9 +91,9 @@
                                         <div class="d-flex align-items-center gap-2 mb-1">
                                             <h5 class="mb-0">{{ demo.title }}</h5>
                                             {% if demo.is_active %}
-                                                <span class="badge bg-success">Active</span>
+                                                <span class="badge bg-success"><i class="bi bi-eye"></i> Visible</span>
                                             {% else %}
-                                                <span class="badge bg-secondary">Inactive</span>
+                                                <span class="badge bg-secondary"><i class="bi bi-eye-slash"></i> Hidden</span>
                                             {% endif %}
                                             {% if demo.media_file %}
                                                 <span class="badge bg-info text-dark"><i class="bi bi-camera-reels"></i> Media</span>
@@ -101,11 +105,22 @@
                                         </a>
                                     </div>
                                     <div class="d-flex align-items-center gap-1">
-                                        <a href="{{ url_for('edit_demo', id=demo.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <form action="{{ url_for('toggle_demo_active', id=demo.id) }}" method="POST" class="d-inline">
+                                            {% if demo.is_active %}
+                                                <button type="submit" class="btn btn-sm btn-outline-success" title="Click to hide from website">
+                                                    <i class="bi bi-toggle-on"></i> Active
+                                                </button>
+                                            {% else %}
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" title="Click to show on website">
+                                                    <i class="bi bi-toggle-off"></i> Inactive
+                                                </button>
+                                            {% endif %}
+                                        </form>
+                                        <a href="{{ url_for('edit_demo', id=demo.id) }}" class="btn btn-sm btn-outline-primary" title="Edit Demo">
                                             <i class="bi bi-pencil-square"></i> Edit
                                         </a>
                                         <form action="{{ url_for('delete_demo', id=demo.id) }}" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this demo completely?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this demo completely?');" title="Delete Demo">
                                                 <i class="bi bi-trash"></i> Delete
                                             </button>
                                         </form>

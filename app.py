@@ -1903,7 +1903,8 @@ def admin_demos():
             flash(err, 'danger')
             return redirect(url_for('admin_demos'))
             
-        demo = DemoSite(title=title, slug=slug, description=description, media_file=media_filename)
+        is_active = True if request.form.get('is_active') in ['1', 'on', 'true', True] else False
+        demo = DemoSite(title=title, slug=slug, description=description, media_file=media_filename, is_active=is_active)
         db.session.add(demo)
         db.session.commit()
         flash('Demo site uploaded and deployed successfully.', 'success')
@@ -1911,6 +1912,16 @@ def admin_demos():
         
     demos = DemoSite.query.order_by(DemoSite.order.asc()).all()
     return render_template('admin_demos.html', demos=demos)
+
+@app.route('/admin/demos/toggle/<int:id>', methods=['POST'])
+@login_required
+def toggle_demo_active(id):
+    demo = DemoSite.query.get_or_404(id)
+    demo.is_active = not demo.is_active
+    db.session.commit()
+    status_label = "active (visible on website)" if demo.is_active else "inactive (hidden from website)"
+    flash(f'Demo "{demo.title}" is now {status_label}.', 'success')
+    return redirect(url_for('admin_demos'))
 
 @app.route('/admin/demos/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
