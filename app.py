@@ -798,12 +798,15 @@ def ask_ai(system_prompt, user_prompt, json_mode=False, context_type="chat"):
             return "Oops! My AI brain needs a little coffee break. The daily chat quota has been reached, but feel free to explore my portfolio and reach out via email!"
     elif context_type == "resume":
         if settings.used_resume_requests >= settings.max_resume_requests:
-            raise Exception("AI quota exceeded for Resume Builder.")
+            raise ValueError("AI quota limit reached for Resume Strategist. Reset or increase limits in Admin > AI Settings.")
+
+    if not settings.api_key:
+        raise ValueError("AI API Key is missing! Please configure your API key in Admin > AI Settings.")
 
     print(f"Connecting to AI Model: {settings.model_name} via {settings.provider_name}...")
     
     headers = {
-        "Authorization": f"Bearer {settings.api_key}",
+        "Authorization": f"Bearer {settings.api_key.strip()}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://your-site.com", 
         "X-Title": "My Portfolio Resume Builder"
@@ -825,13 +828,33 @@ def ask_ai(system_prompt, user_prompt, json_mode=False, context_type="chat"):
         payload["reasoning"] = {"enabled": True}
         
     try:
-        response = requests.post(settings.api_url, headers=headers, data=json.dumps(payload))
-        response.raise_for_status()
-        data = response.json()
+        response = requests.post(settings.api_url, headers=headers, data=json.dumps(payload), timeout=120)
         
+        if response.status_code != 200:
+            error_msg = f"HTTP {response.status_code}"
+            try:
+                err_data = response.json()
+                if "error" in err_data:
+                    if isinstance(err_data["error"], dict) and "message" in err_data["error"]:
+                        error_msg = err_data["error"]["message"]
+                    else:
+                        error_msg = str(err_data["error"])
+            except Exception:
+                error_msg = response.text[:200]
+            
+            if response.status_code == 401:
+                raise ValueError(f"AI API Key Unauthorized ({error_msg}). Please check/update your API Key in Admin > AI Settings.")
+            elif response.status_code == 402:
+                raise ValueError(f"AI Provider Credit Limit ({error_msg}). Please check your OpenRouter credits or switch to a free model.")
+            elif response.status_code == 429:
+                raise ValueError(f"AI Rate Limited ({error_msg}). Please wait a few seconds and try again.")
+            else:
+                raise ValueError(f"AI Provider Error: {error_msg}")
+
+        data = response.json()
         content = data['choices'][0]['message'].get('content', '')
         if not content:
-            raise ValueError("Empty response received")
+            raise ValueError("Empty response received from AI model.")
             
         # Increment quota upon success
         if context_type == "chat":
@@ -842,6 +865,10 @@ def ask_ai(system_prompt, user_prompt, json_mode=False, context_type="chat"):
             
         return content
 
+    except requests.exceptions.Timeout:
+        raise ValueError("AI request timed out after 120s. Please try again with a faster model or shorter JD.")
+    except requests.exceptions.RequestException as e:
+        raise ValueError(f"Network error connecting to AI API: {str(e)}")
     except Exception as e:
         print(f"Failed AI request: {str(e)}")
         raise e
@@ -1400,11 +1427,19 @@ def ai_resume_start():
         flash("Please provide a Job Description.", "warning")
         return redirect(url_for('ai_resume_start'))
     
-    # 1. RAG Context
-    rag_context = get_relevant_context(job_description, k=15)
+    # 1. RAG Context (Safe retrieval)
+    try:
+        rag_context = get_relevant_context(job_description, k=10)
+    except Exception as e:
+        print(f"RAG context extraction warning: {e}")
+        rag_context = ""
     
-    # 2. Raw Database Data
-    my_data_json = get_structured_data_for_ai()
+    # 2. Raw Database Data (Safe retrieval)
+    try:
+        my_data_json = get_structured_data_for_ai()
+    except Exception as e:
+        print(f"Structured data extraction warning: {e}")
+        my_data_json = "{}"
     
     tone_instructions = {
         'technical_impact': 'Focus heavily on engineering problem-solving, concrete technical depth, and specific tool usage.',
@@ -1474,26 +1509,64 @@ Structured Candidate Database Items:
             context_type="resume"
         )
         
-        # Clean up Markdown code blocks if present
-        if "```json" in ai_content:
-            ai_content = ai_content.split("```json")[1].split("```")[0]
-        elif "```" in ai_content:
-            ai_content = ai_content.split("```")[1].split("```")[0]
+        # Clean up Markdown code blocks and extract JSON safely
+        json_match = re.search(r'(\{.*\})', ai_content, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
+        else:
+            json_str = ai_content.strip()
             
-        ai_data = json.loads(ai_content)
-        session['ai_suggestion'] = ai_data
+        try:
+            ai_data = json.loads(json_str)
+        except Exception:
+            ai_data = {}
+
+        # Normalize and sanitize ai_data with safe defaults
+        all_skills = Skill.query.order_by(Skill.order.asc()).all()
+        all_projects = Project.query.order_by(Project.order.asc()).all()
+        all_exp = ResumeItem.query.filter_by(category='work').order_by(ResumeItem.order.asc()).all()
+        all_edu = ResumeItem.query.filter_by(category='education').order_by(ResumeItem.order.asc()).all()
+        all_honors = ResumeItem.query.filter_by(category='honor').order_by(ResumeItem.order.asc()).all()
+        all_papers = ResumeItem.query.filter_by(category='paper').order_by(ResumeItem.order.asc()).all()
+
+        def sanitize_id_list(raw_list, default_list):
+            if isinstance(raw_list, list) and raw_list:
+                cleaned = []
+                for x in raw_list:
+                    try:
+                        cleaned.append(int(x))
+                    except (ValueError, TypeError):
+                        pass
+                return cleaned if cleaned else [item.id for item in default_list]
+            return [item.id for item in default_list]
+
+        safe_ai_data = {
+            "target_role": str(ai_data.get("target_role") or "Target Professional"),
+            "company_name": str(ai_data.get("company_name") or ""),
+            "extracted_skills": ai_data.get("extracted_skills") if isinstance(ai_data.get("extracted_skills"), list) else [],
+            "match_analysis": str(ai_data.get("match_analysis") or ""),
+            "custom_summary": str(ai_data.get("custom_summary") or (profile.about_me if profile else "")),
+            "selected_exp_ids": sanitize_id_list(ai_data.get("selected_exp_ids"), all_exp),
+            "selected_proj_ids": sanitize_id_list(ai_data.get("selected_proj_ids"), all_projects[:4]),
+            "selected_skill_ids": sanitize_id_list(ai_data.get("selected_skill_ids"), all_skills[:12]),
+            "selected_edu_ids": sanitize_id_list(ai_data.get("selected_edu_ids"), all_edu),
+            "selected_honor_ids": sanitize_id_list(ai_data.get("selected_honor_ids"), all_honors),
+            "selected_paper_ids": sanitize_id_list(ai_data.get("selected_paper_ids"), all_papers),
+            "tailored_descriptions": ai_data.get("tailored_descriptions") if isinstance(ai_data.get("tailored_descriptions"), dict) else {},
+            "cover_letter": str(ai_data.get("cover_letter") or "")
+        }
 
         return render_template('admin_ai_result.html', 
-                               ai_data=ai_data,
+                               ai_data=safe_ai_data,
                                selected_template=template_id,
                                templates_list=RESUME_TEMPLATES,
-                               profile=Profile.query.first(),
-                               projects=Project.query.order_by(Project.order.asc()).all(),
-                               skills=Skill.query.order_by(Skill.order.asc()).all(),
-                               exp=ResumeItem.query.filter_by(category='work').order_by(ResumeItem.order.asc()).all(),
-                               edu=ResumeItem.query.filter_by(category='education').order_by(ResumeItem.order.asc()).all(),
-                               honors=ResumeItem.query.filter_by(category='honor').order_by(ResumeItem.order.asc()).all(),
-                               papers=ResumeItem.query.filter_by(category='paper').order_by(ResumeItem.order.asc()).all())
+                               profile=profile,
+                               projects=all_projects,
+                               skills=all_skills,
+                               exp=all_exp,
+                               edu=all_edu,
+                               honors=all_honors,
+                               papers=all_papers)
         
     except Exception as e:
         flash(f"AI Generation Error: {str(e)}", "danger")
@@ -1516,7 +1589,7 @@ def ai_resume_preview_live():
         paragraphs = [p.strip() for p in cover_letter_text.split('\n\n') if p.strip()]
         if not paragraphs and cover_letter_text.strip():
             paragraphs = [p.strip() for p in cover_letter_text.split('\n') if p.strip()]
-        letter_date = datetime.now().strftime("%B %d, %Y")
+        letter_date = datetime.datetime.now().strftime("%B %d, %Y")
         
         return render_template('pdf_templates/cover_letter_template.html',
                                profile=profile,
@@ -1585,7 +1658,7 @@ def ai_cover_letter_generate():
         paragraphs = [p.strip() for p in cover_letter_text.split('\n') if p.strip()]
         
     profile = Profile.query.first()
-    letter_date = datetime.now().strftime("%B %d, %Y")
+    letter_date = datetime.datetime.now().strftime("%B %d, %Y")
     
     rendered = render_template('pdf_templates/cover_letter_template.html',
                                profile=profile,
