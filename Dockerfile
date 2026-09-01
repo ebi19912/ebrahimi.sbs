@@ -17,4 +17,4 @@ RUN mkdir -p static/uploads static/demos
 EXPOSE 5000
 
 # Run Gunicorn
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"]
+CMD ["gunicorn", "-w", "4", "--timeout", "180", "-b", "0.0.0.0:5000", "app:app"]

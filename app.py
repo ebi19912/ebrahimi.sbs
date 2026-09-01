@@ -1410,6 +1410,7 @@ def reset_ai_usage():
 @app.route('/admin/ai-resume', methods=['GET', 'POST'])
 @login_required
 def ai_resume_start():
+    """Stage 1: Analyzes the Job Description and assesses compatibility/fit before building."""
     profile = Profile.query.first()
     active_template = profile.resume_template if profile and profile.resume_template else 'modern'
 
@@ -1429,7 +1430,7 @@ def ai_resume_start():
     
     # 1. RAG Context (Safe retrieval)
     try:
-        rag_context = get_relevant_context(job_description, k=10)
+        rag_context = get_relevant_context(job_description, k=8)
     except Exception as e:
         print(f"RAG context extraction warning: {e}")
         rag_context = ""
@@ -1440,7 +1441,113 @@ def ai_resume_start():
     except Exception as e:
         print(f"Structured data extraction warning: {e}")
         my_data_json = "{}"
-    
+
+    # 3. Stage 1 Prompt: Fast Job Compatibility & Fit Assessment
+    fit_prompt = f"""
+You are a Senior Technical Career Strategist and Recruiter.
+Analyze this Job Description (JD) against my candidate profile and database to determine if it is a good fit and how well I match.
+
+=== STRICT REALISM & ACCURACY ===
+- Be realistic and honest about the match score (0-100%).
+- Identify true matching strengths and any real skill gaps.
+- Provide actionable strategic advice on whether to apply and how to position the candidacy.
+
+=== INPUT DATA ===
+Target Job Description:
+{job_description}
+
+RAG Background Knowledge:
+{rag_context}
+
+Structured Candidate Database Items:
+{my_data_json}
+
+=== REQUIRED JSON OUTPUT FORMAT ONLY ===
+{{
+    "target_role": "Clean Job Title from JD",
+    "company_name": "Company Name if found, or empty string",
+    "fit_score": 85,
+    "fit_level": "Strong Match",
+    "verdict_summary": "2-3 sentences summarizing the overall compatibility and whether candidate should apply.",
+    "matching_strengths": ["Strength 1", "Strength 2", "Strength 3", "Strength 4"],
+    "potential_gaps": ["Gap or secondary requirement 1", "Gap 2"],
+    "recommended_strategy": "Strategic guidance on how to highlight candidate strengths for this role.",
+    "top_matching_projects": ["Project Title 1", "Project Title 2"],
+    "top_matching_skills": ["Skill 1", "Skill 2", "Skill 3", "Skill 4", "Skill 5"]
+}}
+"""
+    try:
+        ai_content = ask_ai(
+            system_prompt="You are a JSON-speaking Career Strategist. Output valid JSON only.", 
+            user_prompt=fit_prompt,
+            json_mode=True,
+            context_type="resume"
+        )
+        
+        json_match = re.search(r'(\{.*\})', ai_content, re.DOTALL)
+        if json_match:
+            json_str = json_match.group(1)
+        else:
+            json_str = ai_content.strip()
+            
+        try:
+            fit_data = json.loads(json_str)
+        except Exception:
+            fit_data = {}
+
+        safe_fit_data = {
+            "target_role": str(fit_data.get("target_role") or "Target Professional"),
+            "company_name": str(fit_data.get("company_name") or ""),
+            "fit_score": int(fit_data.get("fit_score") or 75),
+            "fit_level": str(fit_data.get("fit_level") or "Good Match"),
+            "verdict_summary": str(fit_data.get("verdict_summary") or "The role aligns well with your core software engineering and technical background."),
+            "matching_strengths": fit_data.get("matching_strengths") if isinstance(fit_data.get("matching_strengths"), list) else ["Strong core programming and system development skills."],
+            "potential_gaps": fit_data.get("potential_gaps") if isinstance(fit_data.get("potential_gaps"), list) else [],
+            "recommended_strategy": str(fit_data.get("recommended_strategy") or "Highlight your most impactful technical projects and core architectures."),
+            "top_matching_projects": fit_data.get("top_matching_projects") if isinstance(fit_data.get("top_matching_projects"), list) else [],
+            "top_matching_skills": fit_data.get("top_matching_skills") if isinstance(fit_data.get("top_matching_skills"), list) else []
+        }
+
+        return render_template('admin_ai_fit_check.html',
+                               fit_data=safe_fit_data,
+                               job_description=job_description,
+                               selected_template=template_id,
+                               selected_tone=target_tone,
+                               generate_cover_letter=generate_cover_letter,
+                               templates_list=RESUME_TEMPLATES)
+
+    except Exception as e:
+        flash(f"AI Fit Analysis Error: {str(e)}", "danger")
+        print(f"DEBUG ERROR in AI Fit Analysis: {e}")
+        return redirect(url_for('ai_resume_start'))
+
+
+@app.route('/admin/ai-resume/build', methods=['POST'])
+@login_required
+def ai_resume_build():
+    """Stage 2: Generates the personalized resume and cover letter after user confirmation."""
+    profile = Profile.query.first()
+    active_template = profile.resume_template if profile and profile.resume_template else 'modern'
+
+    job_description = request.form.get('job_description', '').strip()
+    template_id = request.form.get('template_id', active_template)
+    target_tone = request.form.get('target_tone', 'technical_impact')
+    generate_cover_letter = request.form.get('generate_cover_letter', 'true') == 'true'
+
+    if not job_description:
+        flash("Job description missing.", "warning")
+        return redirect(url_for('ai_resume_start'))
+
+    try:
+        rag_context = get_relevant_context(job_description, k=10)
+    except Exception as e:
+        rag_context = ""
+
+    try:
+        my_data_json = get_structured_data_for_ai()
+    except Exception as e:
+        my_data_json = "{}"
+
     tone_instructions = {
         'technical_impact': 'Focus heavily on engineering problem-solving, concrete technical depth, and specific tool usage.',
         'direct_concise': 'Be exceptionally direct and metric-driven with high information density and zero filler adjectives.',
@@ -1448,7 +1555,6 @@ def ai_resume_start():
         'research': 'Emphasize scientific rigor, data pipelines, model benchmarks, publications, and algorithmic design.'
     }.get(target_tone, 'Focus on engineering problem-solving and concrete technical impact.')
 
-    # 3. Robust Human-Tone Anti-AI Prompt
     prompt = f"""
 You are an Elite Technical Recruiter and Expert Human Resume & Cover Letter Writer.
 Your Task: Analyze the provided Job Description (JD), match it with my real background (from RAG context and database), and craft a deeply tailored, 100% human-sounding resume and cover letter.
@@ -1509,7 +1615,6 @@ Structured Candidate Database Items:
             context_type="resume"
         )
         
-        # Clean up Markdown code blocks and extract JSON safely
         json_match = re.search(r'(\{.*\})', ai_content, re.DOTALL)
         if json_match:
             json_str = json_match.group(1)
@@ -1521,7 +1626,6 @@ Structured Candidate Database Items:
         except Exception:
             ai_data = {}
 
-        # Normalize and sanitize ai_data with safe defaults
         all_skills = Skill.query.order_by(Skill.order.asc()).all()
         all_projects = Project.query.order_by(Project.order.asc()).all()
         all_exp = ResumeItem.query.filter_by(category='work').order_by(ResumeItem.order.asc()).all()

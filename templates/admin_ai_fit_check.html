@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Compatibility & Fit Analysis</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f1f5f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #1e293b;
+        }
+        .fit-card {
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+        }
+        .score-circle {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            border: 6px solid;
+        }
+        .score-high { border-color: #10b981; color: #047857; background: #ecfdf5; }
+        .score-medium { border-color: #f59e0b; color: #b45309; background: #fffbeb; }
+        .score-low { border-color: #ef4444; color: #b91c1c; background: #fef2f2; }
+        
+        .badge-skill {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge-project {
+            background-color: #f3e8ff;
+            color: #7e22ce;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+        }
+    </style>
+</head>
+<body class="py-5">
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner-border text-primary mb-3" style="width: 3.5rem; height: 3.5rem;" role="status">
+            <span class="visually-hidden">Building Application...</span>
+        </div>
+        <h4 class="fw-bold">Crafting Personalized Application...</h4>
+        <p class="text-light opacity-75">Tailoring project bullet points, summary, and human-written cover letter.</p>
+    </div>
+
+    <div class="container" style="max-width: 900px;">
+        
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <a href="{{ url_for('ai_resume_start') }}" class="btn btn-outline-secondary btn-sm mb-2">
+                    <i class="bi bi-arrow-left"></i> Change Job Description
+                </a>
+                <h3 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-clipboard2-check text-primary me-2"></i> Job Compatibility & Fit Assessment
+                </h3>
+            </div>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-light btn-sm border">Dashboard</a>
+        </div>
+
+        <!-- Main Fit Card -->
+        <div class="card fit-card p-4 mb-4">
+            <div class="row align-items-center g-4">
+                <div class="col-md-3 text-center">
+                    {% set score = fit_data.fit_score|default(75)|int %}
+                    {% set score_class = 'score-high' if score >= 75 else ('score-medium' if score >= 50 else 'score-low') %}
+                    <div class="score-circle {{ score_class }} mx-auto mb-2">
+                        <span class="fs-2 lh-1">{{ score }}%</span>
+                        <small class="fs-6 fw-bold">Match</small>
+                    </div>
+                    <span class="badge {{ 'bg-success' if score >= 75 else ('bg-warning text-dark' if score >= 50 else 'bg-danger') }} px-3 py-1">
+                        {{ fit_data.fit_level|default('Good Match') }}
+                    </span>
+                </div>
+                <div class="col-md-9">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <h4 class="fw-bold text-dark mb-0">{{ fit_data.target_role }}</h4>
+                        {% if fit_data.company_name %}
+                        <span class="badge bg-secondary fs-6">{{ fit_data.company_name }}</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted mb-0" style="line-height: 1.6;">
+                        {{ fit_data.verdict_summary }}
+                    </p>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Strengths and Gaps Breakdown -->
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 h-100">
+                        <h6 class="fw-bold text-success d-flex align-items-center mb-3">
+                            <i class="bi bi-check-circle-fill me-2"></i> Your Matching Strengths
+                        </h6>
+                        <ul class="mb-0 ps-3 text-dark small" style="line-height: 1.7;">
+                            {% for strength in fit_data.matching_strengths|default([]) %}
+                            <li>{{ strength }}</li>
+                            {% else %}
+                            <li>Matches your core engineering and technical skillset.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 h-100">
+                        <h6 class="fw-bold text-dark d-flex align-items-center mb-3">
+                            <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Potential Gaps / Focus Areas
+                        </h6>
+                        <ul class="mb-0 ps-3 text-dark small" style="line-height: 1.7;">
+                            {% for gap in fit_data.potential_gaps|default([]) %}
+                            <li>{{ gap }}</li>
+                            {% else %}
+                            <li>No major skill gaps identified for this role.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Strategic Recommendation -->
+            {% if fit_data.recommended_strategy %}
+            <div class="mt-4 p-3 bg-light rounded-3 border">
+                <h6 class="fw-bold text-dark mb-1">
+                    <i class="bi bi-lightbulb-fill text-primary me-2"></i> Recommended Positioning Strategy
+                </h6>
+                <p class="text-muted small mb-0">{{ fit_data.recommended_strategy }}</p>
+            </div>
+            {% endif %}
+
+            <!-- Matched Skills & Projects Preview -->
+            <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small text-muted">Top Matching Skills for this JD:</label>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for sk in fit_data.top_matching_skills|default([]) %}
+                        <span class="badge-skill"><i class="bi bi-check2"></i> {{ sk }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small text-muted">Recommended Portfolio Projects to Feature:</label>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for pr in fit_data.top_matching_projects|default([]) %}
+                        <span class="badge-project"><i class="bi bi-folder-check"></i> {{ pr }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmation & Build Form -->
+        <div class="card fit-card p-4">
+            <h5 class="fw-bold text-dark mb-3">
+                <i class="bi bi-gear-fill text-primary me-2"></i> Tailoring Options & Confirmation
+            </h5>
+            
+            <form method="POST" action="{{ url_for('ai_resume_build') }}" onsubmit="showLoading()">
+                <!-- Hidden JD and Role info -->
+                <textarea name="job_description" class="d-none">{{ job_description }}</textarea>
+                <input type="hidden" name="target_role" value="{{ fit_data.target_role }}">
+                <input type="hidden" name="company_name" value="{{ fit_data.company_name }}">
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-dark">
+                            <i class="bi bi-palette me-1 text-primary"></i> Resume PDF Template
+                        </label>
+                        <select name="template_id" class="form-select bg-light">
+                            {% for key, tpl in templates_list.items() %}
+                            <option value="{{ key }}" {% if key == selected_template %}selected{% endif %}>
+                                {{ tpl.name }} ({{ tpl.style_tag }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-dark">
+                            <i class="bi bi-sliders me-1 text-primary"></i> Writing Tone Directive
+                        </label>
+                        <select name="target_tone" class="form-select bg-light">
+                            <option value="technical_impact" {% if selected_tone == 'technical_impact' %}selected{% endif %}>Engineering & High Technical Impact</option>
+                            <option value="direct_concise" {% if selected_tone == 'direct_concise' %}selected{% endif %}>Ultra Direct & Metric-Driven</option>
+                            <option value="leadership" {% if selected_tone == 'leadership' %}selected{% endif %}>Architecture & Technical Leadership</option>
+                            <option value="research" {% if selected_tone == 'research' %}selected{% endif %}>Academic & Research Focus</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4 p-3 bg-light rounded-3 border">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="generateCoverLetter" name="generate_cover_letter" value="true" {% if generate_cover_letter %}checked{% endif %}>
+                        <label class="form-check-label fw-bold text-dark ms-2" for="generateCoverLetter">
+                            <i class="bi bi-envelope-paper-fill text-primary me-1"></i> Include Tailored Human-Written Cover Letter
+                        </label>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-3">
+                    <button type="submit" class="btn btn-primary btn-lg flex-grow-1 fw-bold shadow">
+                        <i class="bi bi-stars me-2"></i> Approve & Build Tailored Application
+                    </button>
+                    <a href="{{ url_for('ai_resume_start') }}" class="btn btn-outline-secondary btn-lg">
+                        <i class="bi bi-x-circle me-1"></i> Try Different JD
+                    </a>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
