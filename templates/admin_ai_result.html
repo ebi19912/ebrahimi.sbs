@@ -2,220 +2,489 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AI Resume Result</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume & Cover Letter Studio</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     <style>
-        .form-control { border-radius: 8px; }
-        .card { border-radius: 12px; border: none; }
-        .card-header { border-radius: 12px 12px 0 0 !important; font-weight: bold; }
+        :root {
+            --bs-primary: #2563eb;
+        }
+        body {
+            background-color: #f1f5f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #1e293b;
+        }
+        .navbar-studio {
+            background-color: #0f172a;
+            border-bottom: 1px solid #334155;
+        }
+        .card {
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+        .card-header {
+            border-radius: 12px 12px 0 0 !important;
+            font-weight: 600;
+        }
+        .handle {
+            cursor: grab;
+            font-size: 1.3rem;
+            color: #94a3b8;
+            margin-right: 12px;
+            padding: 0 4px;
+            user-select: none;
+        }
+        .handle:hover { color: #475569; }
+        .draggable-item {
+            background-color: #ffffff;
+            transition: all 0.2s ease;
+        }
+        .draggable-item:hover {
+            box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+        }
+        .ai-selected {
+            border-left: 4px solid #10b981 !important;
+            background-color: #f0fdf4 !important;
+        }
+        .badge-match {
+            background-color: #dbeafe;
+            color: #1e40af;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+        .btn-toggle-all {
+            font-size: 0.78rem;
+            padding: 2px 8px;
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-toggle-all:hover {
+            background: rgba(255,255,255,0.25);
+            color: white;
+        }
         
-        /* استایل هندل برای درگ کردن */
-        .handle { cursor: grab; font-size: 1.6rem; color: #adb5bd; margin-right: 15px; padding: 0 5px; align-self: center; }
-        .handle:hover { color: #495057; }
-        
-        .draggable-item { background-color: white; transition: box-shadow 0.2s; }
-        .draggable-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        
-        /* استایل خاص برای آیتم‌های انتخابی هوش مصنوعی */
-        .ai-selected { border-left: 5px solid #198754 !important; background-color: #f8fffb; }
-        
-        /* دکمه انتخاب همه */
-        .btn-toggle-all { font-size: 0.8rem; padding: 2px 8px; border: 1px solid rgba(255,255,255,0.5); color: white; background: rgba(255,255,255,0.1); border-radius: 4px; cursor: pointer; text-decoration: none; }
-        .btn-toggle-all:hover { background: rgba(255,255,255,0.3); color: white; }
+        /* Sticky Live Preview Pane */
+        .preview-sticky-container {
+            position: sticky;
+            top: 20px;
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+        }
+        .preview-iframe-wrapper {
+            flex-grow: 1;
+            background: #64748b;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+            box-shadow: inset 0 2px 6px rgba(0,0,0,0.2);
+        }
+        .preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #ffffff;
+            border-radius: 6px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+        }
+        .studio-nav-tab .nav-link {
+            font-weight: 600;
+            color: #64748b;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+        }
+        .studio-nav-tab .nav-link.active {
+            color: #2563eb;
+            background: #eff6ff;
+        }
+        .toast-copy {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10000;
+            display: none;
+        }
     </style>
 </head>
-<body class="bg-light">
-    
-    <div class="alert alert-success text-center mb-0 rounded-0 shadow-sm" style="border-bottom: 1px solid #198754;">
-        <strong>✨ AI Suggestion Ready:</strong> Tailored for "<b>{{ ai_data.target_role }}</b>". Review, Edit & Print.
-        <a href="{{ url_for('ai_resume_start') }}" class="btn btn-sm btn-outline-success ms-3 bg-white text-success border-success">Start Over</a>
-    </div>
+<body>
 
-    <div class="container mt-5 mb-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>🤖 AI Generated Draft</h2>
-            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary shadow-sm">Dashboard</a>
+    <!-- Studio Header -->
+    <nav class="navbar navbar-dark navbar-studio px-3 py-2">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center gap-2">
+                <span class="navbar-brand mb-0 h1 fw-bold fs-5">
+                    <i class="bi bi-cpu text-primary me-1"></i> AI Resume Strategist Studio
+                </span>
+                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25 px-2 py-1">
+                    <i class="bi bi-shield-check me-1"></i> Human Tone Engine Active
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="{{ url_for('ai_resume_start') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-arrow-repeat me-1"></i> Start Over
+                </a>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary btn-sm">
+                    <i class="bi bi-grid me-1"></i> Dashboard
+                </a>
+            </div>
         </div>
+    </nav>
 
-        <form method="POST" action="{{ url_for('ai_resume_generate') }}" target="_blank"> 
-            <div class="row">
-                
-                <div class="col-md-4">
-                    <div class="card shadow-sm mb-4 sticky-top" style="top: 20px; z-index: 1;">
-                        <div class="card-header bg-primary text-white">Target Job Info</div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Target Job Title</label>
-                                <input type="text" name="target_role" class="form-control" value="{{ ai_data.target_role }}" required>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Custom Summary</label>
-                                <textarea name="custom_summary" class="form-control" rows="12">{{ ai_data.custom_summary }}</textarea>
-                                <small class="text-muted d-block mt-1">Generated by AI based on JD keywords.</small>
-                            </div>
-
-                            <button type="submit" class="btn btn-success w-100 py-3 fw-bold shadow-sm">
-                                📥 Generate PDF
-                            </button>
-                        </div>
+    <!-- Strategy Insight Banner -->
+    <div class="bg-white border-bottom py-3 shadow-sm">
+        <div class="container-fluid px-4">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                        <h4 class="fw-bold mb-0 text-dark">{{ ai_data.target_role }}</h4>
+                        {% if ai_data.company_name %}
+                        <span class="badge bg-secondary">Target: {{ ai_data.company_name }}</span>
+                        {% endif %}
+                    </div>
+                    {% if ai_data.match_analysis %}
+                    <p class="text-muted small mb-0 mt-1">
+                        <i class="bi bi-lightning-charge-fill text-warning me-1"></i>
+                        <strong>Strategy Insight:</strong> {{ ai_data.match_analysis }}
+                    </p>
+                    {% endif %}
+                </div>
+                <div class="col-lg-4 text-lg-end mt-2 mt-lg-0">
+                    <div class="d-flex flex-wrap justify-content-lg-end gap-1">
+                        {% for skill in ai_data.extracted_skills|default([]) %}
+                        <span class="badge-match"><i class="bi bi-check2 me-1"></i>{{ skill }}</span>
+                        {% endfor %}
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
 
-                <div class="col-md-8">
-                    
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                            <span>Select Skills (Drag to Reorder)</span>
-                            <button type="button" class="btn-toggle-all" onclick="toggleAll('selected_skills')">Toggle All</button>
-                        </div>
-                        <div class="card-body">
-                            <div class="row sortable-container">
-                                {% for skill in skills %}
-                                {% set is_sel = skill.id in ai_data.selected_skill_ids %}
-                                <div class="col-md-6 mb-2"> 
-                                    <div class="draggable-item border rounded p-2 d-flex align-items-center {{ 'ai-selected' if is_sel }}">
-                                        <span class="handle">☰</span>
-                                        <div class="form-check flex-grow-1 m-0">
-                                            <input class="form-check-input" type="checkbox" name="selected_skills" value="{{ skill.id }}" id="sk{{ skill.id }}" {% if is_sel %}checked{% endif %}>
-                                            <label class="form-check-label w-100 ms-1" for="sk{{ skill.id }}">
-                                                {{ skill.name }} <small class="text-muted">({{ skill.level }}%)</small>
+    <!-- Main Workspace Form -->
+    <div class="container-fluid px-4 my-4">
+        <form id="studioForm" method="POST" target="previewFrame" action="{{ url_for('ai_resume_preview_live') }}">
+            <!-- Hidden field to control preview mode -->
+            <input type="hidden" name="preview_type" id="previewTypeInput" value="resume">
+            
+            <div class="row g-4">
+                
+                <!-- Left Pane: Editor & Customizer -->
+                <div class="col-xl-6 col-lg-6">
+
+                    <!-- Workspace Navigation Tabs -->
+                    <ul class="nav studio-nav-tab bg-white p-2 rounded-3 border mb-3" id="studioTabs" role="tablist">
+                        <li class="nav-item flex-fill text-center">
+                            <button class="nav-link active w-100" id="resume-tab" data-bs-toggle="tab" data-bs-target="#tabResume" type="button" role="tab" onclick="switchPreviewMode('resume')">
+                                <i class="bi bi-file-earmark-person me-1"></i> Resume Customizer
+                            </button>
+                        </li>
+                        <li class="nav-item flex-fill text-center">
+                            <button class="nav-link w-100" id="cover-letter-tab" data-bs-toggle="tab" data-bs-target="#tabCoverLetter" type="button" role="tab" onclick="switchPreviewMode('cover_letter')">
+                                <i class="bi bi-envelope-paper me-1"></i> Cover Letter Studio
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="studioTabsContent">
+                        
+                        <!-- TAB 1: RESUME CUSTOMIZER -->
+                        <div class="tab-pane fade show active" id="tabResume" role="tabpanel">
+                            
+                            <!-- Template & Target Job Info Card -->
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-sliders me-1"></i> Role Info & Design Template</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-7">
+                                            <label class="form-label fw-bold small text-muted">Target Job Title</label>
+                                            <input type="text" name="target_role" id="targetRoleField" class="form-control" value="{{ ai_data.target_role }}" required oninput="triggerAutoPreview()">
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label fw-bold small text-muted">Resume PDF Template</label>
+                                            <select name="template_id" id="templateSelect" class="form-select" onchange="triggerAutoPreview()">
+                                                {% for key, tpl in templates_list.items() %}
+                                                <option value="{{ key }}" {% if key == selected_template %}selected{% endif %}>
+                                                    {{ tpl.name }}
+                                                </option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold small text-muted">Target Company / Organization (Optional)</label>
+                                            <input type="text" name="company_name" id="companyNameField" class="form-control" value="{{ ai_data.company_name|default('') }}" placeholder="e.g. Google, Stripe, ACME Corp..." oninput="triggerAutoPreview()">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label fw-bold small text-muted d-flex justify-content-between">
+                                                <span>Executive Summary (Human-Written, Tailored to JD)</span>
+                                                <span class="text-success small fw-normal"><i class="bi bi-check-circle-fill me-1"></i>No AI Clichés</span>
                                             </label>
+                                            <textarea name="custom_summary" class="form-control bg-light" rows="5" oninput="triggerAutoPreview()">{{ ai_data.custom_summary }}</textarea>
                                         </div>
                                     </div>
                                 </div>
-                                {% endfor %}
                             </div>
-                        </div>
-                    </div>
 
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                            <span>Experience</span>
-                            <button type="button" class="btn-toggle-all" onclick="toggleAll('selected_exp')">Toggle All</button>
-                        </div>
-                        <div class="card-body sortable-container">
-                            {% for item in exp %}
-                            {% set is_sel = item.id in ai_data.selected_exp_ids %}
-                            {% set txt = ai_data.tailored_descriptions.get('exp_' ~ item.id, item.description) %}
-                            
-                            <div class="mb-3 border rounded p-3 draggable-item {{ 'ai-selected' if is_sel }}">
-                                <div class="d-flex align-items-center mb-3 border-bottom pb-2">
-                                    <span class="handle">☰</span>
-                                    <div class="form-check flex-grow-1 m-0">
-                                        <input class="form-check-input" type="checkbox" name="selected_exp" value="{{ item.id }}" id="ex{{ item.id }}" {% if is_sel %}checked{% endif %}>
-                                        <label class="form-check-label fw-bold fs-5 ms-1" for="ex{{ item.id }}">
-                                            {{ item.title }} <span class="text-muted fw-normal">at {{ item.organization }}</span>
-                                        </label>
+                            <!-- Skills Selection -->
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-tools me-1"></i> Technical Skills (Reorder & Select)</span>
+                                    <button type="button" class="btn-toggle-all" onclick="toggleAll('selected_skills')">Toggle All</button>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="row g-2 sortable-container">
+                                        {% for skill in skills %}
+                                        {% set is_sel = skill.id in ai_data.selected_skill_ids %}
+                                        <div class="col-md-6">
+                                            <div class="draggable-item border rounded p-2 d-flex align-items-center {{ 'ai-selected' if is_sel }}">
+                                                <span class="handle">☰</span>
+                                                <div class="form-check flex-grow-1 m-0">
+                                                    <input class="form-check-input" type="checkbox" name="selected_skills" value="{{ skill.id }}" id="sk{{ skill.id }}" {% if is_sel %}checked{% endif %} onchange="triggerAutoPreview()">
+                                                    <label class="form-check-label w-100 ms-1 small fw-bold" for="sk{{ skill.id }}">
+                                                        {{ skill.name }} <span class="text-muted fw-normal">({{ skill.level }}%)</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
                                     </div>
                                 </div>
-                                <div class="ps-4 ms-2">
-                                    <label class="small text-muted fw-bold">Description (AI Tailored):</label>
-                                    <textarea name="desc_exp_{{ item.id }}" class="form-control bg-light" rows="4">{{ txt | striptags }}</textarea>
+                            </div>
+
+                            <!-- Projects (Selected & Tailored) -->
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-folder-check me-1"></i> Projects (AI-Selected & Tailored for JD)</span>
+                                    <button type="button" class="btn-toggle-all" onclick="toggleAll('selected_proj')">Toggle All</button>
+                                </div>
+                                <div class="card-body sortable-container">
+                                    {% for p in projects %}
+                                    {% set is_sel = p.id in ai_data.selected_proj_ids %}
+                                    {% set txt = ai_data.tailored_descriptions.get('proj_' ~ p.id, p.short_description) %}
+                                    <div class="mb-3 border rounded p-3 draggable-item {{ 'ai-selected' if is_sel }}">
+                                        <div class="d-flex align-items-center mb-2 border-bottom pb-2">
+                                            <span class="handle">☰</span>
+                                            <div class="form-check flex-grow-1 m-0">
+                                                <input class="form-check-input" type="checkbox" name="selected_proj" value="{{ p.id }}" id="pr{{ p.id }}" {% if is_sel %}checked{% endif %} onchange="triggerAutoPreview()">
+                                                <label class="form-check-label fw-bold fs-6 ms-1" for="pr{{ p.id }}">
+                                                    {{ p.title }}
+                                                    {% if p.tags %}<span class="badge bg-secondary bg-opacity-25 text-dark ms-2 small">{{ p.tags }}</span>{% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="ps-4">
+                                            <label class="small text-muted fw-bold mb-1">Tailored Bullet Points / Description:</label>
+                                            <textarea name="desc_proj_{{ p.id }}" class="form-control bg-light" rows="3" oninput="triggerAutoPreview()">{{ txt | striptags }}</textarea>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
                                 </div>
                             </div>
-                            {% endfor %}
-                        </div>
-                    </div>
 
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                            <span>Projects</span>
-                            <button type="button" class="btn-toggle-all" onclick="toggleAll('selected_proj')">Toggle All</button>
-                        </div>
-                        <div class="card-body sortable-container">
-                            {% for p in projects %}
-                            {% set is_sel = p.id in ai_data.selected_proj_ids %}
-                            {% set txt = ai_data.tailored_descriptions.get('proj_' ~ p.id, p.short_description) %}
-                            
-                            <div class="mb-3 border rounded p-3 draggable-item {{ 'ai-selected' if is_sel }}">
-                                <div class="d-flex align-items-center mb-3 border-bottom pb-2">
-                                    <span class="handle">☰</span>
-                                    <div class="form-check flex-grow-1 m-0">
-                                        <input class="form-check-input" type="checkbox" name="selected_proj" value="{{ p.id }}" id="pr{{ p.id }}" {% if is_sel %}checked{% endif %}>
-                                        <label class="form-check-label fw-bold fs-5 ms-1" for="pr{{ p.id }}">{{ p.title }}</label>
+                            <!-- Work Experience -->
+                            <div class="card shadow-sm mb-3">
+                                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-briefcase me-1"></i> Work Experience</span>
+                                    <button type="button" class="btn-toggle-all" onclick="toggleAll('selected_exp')">Toggle All</button>
+                                </div>
+                                <div class="card-body sortable-container">
+                                    {% for item in exp %}
+                                    {% set is_sel = item.id in ai_data.selected_exp_ids %}
+                                    {% set txt = ai_data.tailored_descriptions.get('exp_' ~ item.id, item.description) %}
+                                    <div class="mb-3 border rounded p-3 draggable-item {{ 'ai-selected' if is_sel }}">
+                                        <div class="d-flex align-items-center mb-2 border-bottom pb-2">
+                                            <span class="handle">☰</span>
+                                            <div class="form-check flex-grow-1 m-0">
+                                                <input class="form-check-input" type="checkbox" name="selected_exp" value="{{ item.id }}" id="ex{{ item.id }}" {% if is_sel %}checked{% endif %} onchange="triggerAutoPreview()">
+                                                <label class="form-check-label fw-bold fs-6 ms-1" for="ex{{ item.id }}">
+                                                    {{ item.title }} <span class="text-muted fw-normal">at {{ item.organization }}</span>
+                                                    {% if item.duration %}<span class="text-muted small ms-2">({{ item.duration }})</span>{% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="ps-4">
+                                            <label class="small text-muted fw-bold mb-1">Tailored Experience Description:</label>
+                                            <textarea name="desc_exp_{{ item.id }}" class="form-control bg-light" rows="3" oninput="triggerAutoPreview()">{{ txt | striptags }}</textarea>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Education & Honors/Papers -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                                            <span><i class="bi bi-mortarboard me-1"></i> Education</span>
+                                            <button type="button" class="btn-toggle-all" onclick="toggleAll('selected_edu')">Toggle</button>
+                                        </div>
+                                        <div class="card-body sortable-container p-2">
+                                            {% for item in edu %}
+                                            {% set is_sel = item.id in ai_data.selected_edu_ids %}
+                                            <div class="draggable-item mb-2 border rounded p-2 d-flex align-items-center {{ 'ai-selected' if is_sel }}">
+                                                <span class="handle">☰</span>
+                                                <div class="form-check flex-grow-1 m-0">
+                                                    <input class="form-check-input" type="checkbox" name="selected_edu" value="{{ item.id }}" id="ed{{ item.id }}" {% if is_sel %}checked{% endif %} onchange="triggerAutoPreview()">
+                                                    <label class="form-check-label ms-1 small" for="ed{{ item.id }}">
+                                                        <strong>{{ item.title }}</strong><br><span class="text-muted">{{ item.organization }}</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="ps-4 ms-2">
-                                    <label class="small text-muted fw-bold">Description (AI Tailored):</label>
-                                    <textarea name="desc_proj_{{ p.id }}" class="form-control bg-light" rows="3">{{ txt | striptags }}</textarea>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
 
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                            <span>Education</span>
-                            <button type="button" class="btn-toggle-all" onclick="toggleAll('selected_edu')">Toggle All</button>
-                        </div>
-                        <div class="card-body sortable-container">
-                            {% for item in edu %}
-                            {% set is_sel = item.id in ai_data.selected_edu_ids %}
-                            <div class="draggable-item mb-2 border rounded p-3 d-flex align-items-center {{ 'ai-selected' if is_sel }}">
-                                <span class="handle">☰</span>
-                                <div class="form-check flex-grow-1 m-0">
-                                    <input class="form-check-input" type="checkbox" name="selected_edu" value="{{ item.id }}" id="ed{{ item.id }}" {% if is_sel %}checked{% endif %}>
-                                    <label class="form-check-label ms-1" for="ed{{ item.id }}">
-                                        <strong>{{ item.title }}</strong> - {{ item.organization }}
-                                    </label>
+                                <div class="col-md-6">
+                                    <div class="card shadow-sm h-100">
+                                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                                            <span><i class="bi bi-award me-1"></i> Honors & Papers</span>
+                                            <button type="button" class="btn-toggle-all" onclick="toggleAll('selected_honors'); toggleAll('selected_papers');">Toggle</button>
+                                        </div>
+                                        <div class="card-body sortable-container p-2">
+                                            {% for item in honors %}
+                                            {% set is_sel = item.id in ai_data.selected_honor_ids %}
+                                            <div class="draggable-item mb-2 border rounded p-2 d-flex align-items-center {{ 'ai-selected' if is_sel }}">
+                                                <span class="handle">☰</span>
+                                                <div class="form-check flex-grow-1 m-0">
+                                                    <input class="form-check-input" type="checkbox" name="selected_honors" value="{{ item.id }}" id="hn{{ item.id }}" {% if is_sel %}checked{% endif %} onchange="triggerAutoPreview()">
+                                                    <label class="form-check-label ms-1 small" for="hn{{ item.id }}">
+                                                        <span class="badge bg-warning text-dark me-1">Honor</span> {{ item.title }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                            {% for item in papers %}
+                                            {% set is_sel = item.id in ai_data.selected_paper_ids %}
+                                            <div class="draggable-item mb-2 border rounded p-2 d-flex align-items-center {{ 'ai-selected' if is_sel }}">
+                                                <span class="handle">☰</span>
+                                                <div class="form-check flex-grow-1 m-0">
+                                                    <input class="form-check-input" type="checkbox" name="selected_papers" value="{{ item.id }}" id="pp{{ item.id }}" {% if is_sel %}checked{% endif %} onchange="triggerAutoPreview()">
+                                                    <label class="form-check-label ms-1 small" for="pp{{ item.id }}">
+                                                        <span class="badge bg-info text-dark me-1">Paper</span> {{ item.title }}
+                                                    </label>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                            <span>Honors & Papers</span>
-                            <button type="button" class="btn-toggle-all" onclick="toggleAll('selected_honors'); toggleAll('selected_papers');">Toggle All</button>
-                        </div>
-                        <div class="card-body sortable-container">
-                            <h6>Honors</h6>
-                            {% for item in honors %}
-                            {% set is_sel = item.id in ai_data.selected_honor_ids %}
-                            <div class="draggable-item mb-2 border rounded p-2 d-flex align-items-center {{ 'ai-selected' if is_sel }}">
-                                <span class="handle">☰</span>
-                                <div class="form-check flex-grow-1 m-0">
-                                    <input class="form-check-input" type="checkbox" name="selected_honors" value="{{ item.id }}" id="hn{{ item.id }}" {% if is_sel %}checked{% endif %}>
-                                    <label class="form-check-label ms-1" for="hn{{ item.id }}">{{ item.title }}</label>
-                                </div>
-                            </div>
-                            {% endfor %}
-                            
-                            <hr>
-                            <h6>Papers</h6>
-                            {% for item in papers %}
-                            {% set is_sel = item.id in ai_data.selected_paper_ids %}
-                            <div class="draggable-item mb-2 border rounded p-2 d-flex align-items-center {{ 'ai-selected' if is_sel }}">
-                                <span class="handle">☰</span>
-                                <div class="form-check flex-grow-1 m-0">
-                                    <input class="form-check-input" type="checkbox" name="selected_papers" value="{{ item.id }}" id="pp{{ item.id }}" {% if is_sel %}checked{% endif %}>
-                                    <label class="form-check-label ms-1" for="pp{{ item.id }}">{{ item.title }}</label>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
 
+                        </div>
+
+                        <!-- TAB 2: COVER LETTER STUDIO -->
+                        <div class="tab-pane fade" id="tabCoverLetter" role="tabpanel">
+                            <div class="card shadow-sm mb-4">
+                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-envelope-paper-fill me-2"></i> Tailored Cover Letter (Human Tone)</span>
+                                    <button type="button" class="btn btn-sm btn-light text-primary fw-bold" onclick="copyCoverLetter()">
+                                        <i class="bi bi-clipboard-check me-1"></i> Copy Text
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info py-2 px-3 small mb-3">
+                                        <i class="bi bi-lightbulb-fill text-warning me-1"></i>
+                                        <strong>Crafted with Human Cadence:</strong> This cover letter connects your actual background to the JD's requirements without boilerplate robotic greetings or buzzwords.
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold small text-muted">Cover Letter Content (Editable)</label>
+                                        <textarea name="cover_letter_text" id="coverLetterText" class="form-control bg-light" rows="16" style="font-size: 0.95rem; line-height: 1.6;" oninput="triggerAutoPreview()">{{ ai_data.cover_letter }}</textarea>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="text-muted small" id="wordCountLabel">Word Count: calculating...</span>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="copyCoverLetter()">
+                                            <i class="bi bi-clipboard me-1"></i> Copy to Clipboard
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
+
+                <!-- Right Pane: Sticky Live Preview & Action Deck -->
+                <div class="col-xl-6 col-lg-6">
+                    <div class="preview-sticky-container">
+                        
+                        <!-- Preview Header Toolbar -->
+                        <div class="bg-white p-3 rounded-top border border-bottom-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-primary active" id="btnPreviewResume" onclick="setPreviewTab('resume')">
+                                    <i class="bi bi-file-earmark-person me-1"></i> Resume Preview
+                                </button>
+                                <button type="button" class="btn btn-outline-primary" id="btnPreviewCover" onclick="setPreviewTab('cover_letter')">
+                                    <i class="bi bi-envelope me-1"></i> Cover Letter Preview
+                                </button>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="refreshPreview()" title="Refresh live preview">
+                                    <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                                </button>
+                                <button type="button" class="btn btn-success btn-sm fw-bold shadow-sm" onclick="downloadCurrentDocument()">
+                                    <i class="bi bi-download me-1"></i> <span id="downloadBtnLabel">Download PDF</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Iframe Container -->
+                        <div class="preview-iframe-wrapper rounded-0 rounded-bottom">
+                            <iframe name="previewFrame" id="previewFrame" class="preview-iframe" title="Document Live Preview"></iframe>
+                        </div>
+
+                        <!-- Bottom Action Deck -->
+                        <div class="bg-white p-3 rounded-3 border mt-3 shadow-sm d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <button type="button" class="btn btn-success flex-grow-1 py-2 fw-bold" onclick="downloadResumePdf()">
+                                <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download Resume PDF
+                            </button>
+                            <button type="button" class="btn btn-primary flex-grow-1 py-2 fw-bold" onclick="downloadCoverLetterPdf()">
+                                <i class="bi bi-envelope-paper-fill me-1"></i> Download Cover Letter PDF
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
         </form>
     </div>
 
+    <!-- Copy Toast Notification -->
+    <div class="toast-copy alert alert-success shadow-lg border-0 py-2 px-3 align-items-center d-none" id="copyToast" role="alert">
+        <i class="bi bi-check-circle-fill text-success me-2"></i> Cover letter copied to clipboard!
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // فعال کردن Sortable برای تمام کانتینرها
+        // Initialize Drag & Drop Sortable containers
         document.querySelectorAll('.sortable-container').forEach(function(el) {
             new Sortable(el, { 
                 handle: '.handle', 
                 animation: 150, 
-                ghostClass: 'sortable-ghost' 
+                ghostClass: 'sortable-ghost',
+                onEnd: function() {
+                    triggerAutoPreview();
+                }
             });
         });
 
-        // تابع انتخاب/حذف همه چک‌باکس‌ها
+        // Toggle All Checkboxes
         function toggleAll(name) {
             var checkboxes = document.querySelectorAll('input[name="' + name + '"]');
             if (checkboxes.length === 0) return;
@@ -224,8 +493,143 @@
                 if (!checkboxes[i].checked) { allChecked = false; break; }
             }
             var newState = !allChecked;
-            checkboxes.forEach(function(checkbox) { checkbox.checked = newState; });
+            checkboxes.forEach(function(checkbox) { 
+                checkbox.checked = newState; 
+                var card = checkbox.closest('.draggable-item');
+                if (card) {
+                    if (newState) card.classList.add('ai-selected');
+                    else card.classList.remove('ai-selected');
+                }
+            });
+            triggerAutoPreview();
         }
+
+        // Active Preview Mode: 'resume' or 'cover_letter'
+        var currentPreviewMode = 'resume';
+
+        function switchPreviewMode(mode) {
+            currentPreviewMode = mode;
+            document.getElementById('previewTypeInput').value = mode;
+            
+            if (mode === 'resume') {
+                document.getElementById('btnPreviewResume').classList.add('active');
+                document.getElementById('btnPreviewCover').classList.remove('active');
+                document.getElementById('downloadBtnLabel').innerText = 'Download Resume PDF';
+            } else {
+                document.getElementById('btnPreviewCover').classList.add('active');
+                document.getElementById('btnPreviewResume').classList.remove('active');
+                document.getElementById('downloadBtnLabel').innerText = 'Download Cover Letter PDF';
+            }
+            refreshPreview();
+        }
+
+        function setPreviewTab(mode) {
+            if (mode === 'resume') {
+                var tabTrigger = new bootstrap.Tab(document.getElementById('resume-tab'));
+                tabTrigger.show();
+            } else {
+                var tabTrigger = new bootstrap.Tab(document.getElementById('cover-letter-tab'));
+                tabTrigger.show();
+            }
+            switchPreviewMode(mode);
+        }
+
+        // Live preview refresh
+        function refreshPreview() {
+            var form = document.getElementById('studioForm');
+            form.action = "{{ url_for('ai_resume_preview_live') }}";
+            form.target = "previewFrame";
+            form.submit();
+        }
+
+        // Debounced auto preview
+        var previewDebounceTimer = null;
+        function triggerAutoPreview() {
+            updateWordCount();
+            clearTimeout(previewDebounceTimer);
+            previewDebounceTimer = setTimeout(function() {
+                refreshPreview();
+            }, 600);
+        }
+
+        // Download handlers
+        function downloadCurrentDocument() {
+            if (currentPreviewMode === 'cover_letter') {
+                downloadCoverLetterPdf();
+            } else {
+                downloadResumePdf();
+            }
+        }
+
+        function downloadResumePdf() {
+            var form = document.getElementById('studioForm');
+            var oldAction = form.action;
+            var oldTarget = form.target;
+            
+            form.action = "{{ url_for('ai_resume_generate') }}";
+            form.target = "_blank";
+            form.submit();
+            
+            form.action = oldAction;
+            form.target = oldTarget;
+        }
+
+        function downloadCoverLetterPdf() {
+            var form = document.getElementById('studioForm');
+            var oldAction = form.action;
+            var oldTarget = form.target;
+            
+            form.action = "{{ url_for('ai_cover_letter_generate') }}";
+            form.target = "_blank";
+            form.submit();
+            
+            form.action = oldAction;
+            form.target = oldTarget;
+        }
+
+        // Copy Cover Letter
+        function copyCoverLetter() {
+            var text = document.getElementById('coverLetterText').value;
+            navigator.clipboard.writeText(text).then(function() {
+                var toast = document.getElementById('copyToast');
+                toast.classList.remove('d-none');
+                toast.classList.add('d-flex');
+                setTimeout(function() {
+                    toast.classList.remove('d-flex');
+                    toast.classList.add('d-none');
+                }, 3000);
+            }).catch(function(err) {
+                alert('Could not copy to clipboard: ' + err);
+            });
+        }
+
+        // Word Count calculation
+        function updateWordCount() {
+            var text = document.getElementById('coverLetterText').value.trim();
+            var words = text ? text.split(/\s+/).length : 0;
+            var chars = text.length;
+            var label = document.getElementById('wordCountLabel');
+            if (label) {
+                label.innerText = 'Word Count: ' + words + ' words (' + chars + ' characters)';
+            }
+        }
+
+        // Update card style on checkbox change
+        document.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var card = cb.closest('.draggable-item');
+                if (card) {
+                    if (cb.checked) card.classList.add('ai-selected');
+                    else card.classList.remove('ai-selected');
+                }
+            });
+        });
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', function() {
+            updateWordCount();
+            refreshPreview();
+        });
     </script>
 </body>
 </html>

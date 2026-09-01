@@ -2,44 +2,169 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AI Resume Strategist</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Strategist & Cover Letter Studio</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .strategist-card {
+            border-radius: 20px;
+            border: none;
+            background: #ffffff;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+        }
+        .feature-badge {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            border-radius: 50px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+        }
+        .feature-badge i {
+            color: #2563eb;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 0.25rem rgba(37, 99, 235, 0.15);
+        }
+        .btn-analyze {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .btn-analyze:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+        }
+    </style>
 </head>
-<body class="bg-light d-flex flex-column align-items-center justify-content-center" style="height: 100vh;">
+<body class="d-flex align-items-center justify-content-center py-5">
 
-    <div class="container mt-3" style="max-width: 600px;">
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner-border text-primary mb-3" style="width: 3.5rem; height: 3.5rem;" role="status">
+            <span class="visually-hidden">Analyzing...</span>
+        </div>
+        <h4 class="fw-bold">AI Resume Strategist at Work...</h4>
+        <p class="text-light opacity-75">Analyzing JD requirements, matching projects, and crafting human-written narratives.</p>
+    </div>
+
+    <div class="container" style="max-width: 780px;">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
-                <strong>{{ message }}</strong>
+              <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm mb-4" role="alert">
+                <strong><i class="bi bi-info-circle me-1"></i> {{ message }}</strong>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
               </div>
             {% endfor %}
           {% endif %}
         {% endwith %}
-    </div>
 
-    <div class="card shadow-lg p-4 border-0" style="max-width: 600px; width: 100%; border-radius: 15px;">
-        <div class="text-center mb-4">
-            <i class="bi bi-cpu text-primary" style="font-size: 3rem;"></i>
-            <h3 class="fw-bold mt-2">AI Resume Strategist</h3>
-            <p class="text-muted">Paste the JD below. I'll select the best projects and rewrite them for you.</p>
-        </div>
-        <form method="POST">
-            <div class="mb-3">
-                <textarea name="job_description" class="form-control bg-light" rows="8" placeholder="Paste Job Description..." required style="border-radius: 10px;"></textarea>
+        <div class="card strategist-card p-4 p-md-5">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex p-3 rounded-circle bg-primary bg-opacity-10 text-primary mb-3">
+                    <i class="bi bi-cpu-fill fs-1"></i>
+                </div>
+                <h2 class="fw-bold text-dark mb-2">AI Resume & Cover Letter Strategist</h2>
+                <p class="text-muted mb-3">
+                    Paste any target Job Description. The AI will extract core requirements, match your actual projects and experience, rewrite bullet points with authentic human phrasing, and generate a tailored Cover Letter.
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-2 mb-2">
+                    <span class="feature-badge"><i class="bi bi-person-check-fill text-success"></i> 100% Human-Written Tone</span>
+                    <span class="feature-badge"><i class="bi bi-slash-circle-fill text-danger"></i> Zero AI Clichés</span>
+                    <span class="feature-badge"><i class="bi bi-envelope-paper-fill text-primary"></i> Tailored Cover Letter</span>
+                    <span class="feature-badge"><i class="bi bi-eye-fill text-info"></i> Interactive Live Preview</span>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow-sm">
-                Analyze & Build <i class="bi bi-arrow-right"></i>
-            </button>
-        </form>
-        <div class="text-center mt-4">
-            <a href="{{ url_for('admin_dashboard') }}" class="text-decoration-none text-secondary small">Back to Dashboard</a>
+
+            <form method="POST" id="resumeForm" onsubmit="showLoading()">
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-dark d-flex justify-content-between">
+                        <span><i class="bi bi-file-text me-1 text-primary"></i> Target Job Description (JD)</span>
+                        <span class="text-muted small fw-normal">Paste full job requirements & responsibilities</span>
+                    </label>
+                    <textarea name="job_description" class="form-control bg-light" rows="9" placeholder="Paste the Job Description (Title, Requirements, Tech Stack, Responsibilities)..." required style="border-radius: 12px; font-size: 0.95rem;"></textarea>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-dark small">
+                            <i class="bi bi-palette me-1 text-primary"></i> Resume Template
+                        </label>
+                        <select name="template_id" class="form-select bg-light" style="border-radius: 10px;">
+                            {% for key, tpl in templates_list.items() %}
+                            <option value="{{ key }}" {% if key == active_template %}selected{% endif %}>
+                                {{ tpl.name }} ({{ tpl.style_tag }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold text-dark small">
+                            <i class="bi bi-sliders me-1 text-primary"></i> Strategic Focus / Tone
+                        </label>
+                        <select name="target_tone" class="form-select bg-light" style="border-radius: 10px;">
+                            <option value="technical_impact" selected>Engineering & High Technical Impact</option>
+                            <option value="direct_concise">Ultra Direct & Metric-Driven</option>
+                            <option value="leadership">Architecture & Technical Leadership</option>
+                            <option value="research">Academic & Research Focus</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4 p-3 bg-light rounded-3 border">
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="generateCoverLetter" name="generate_cover_letter" value="true" checked>
+                        <label class="form-check-label fw-bold text-dark ms-2" for="generateCoverLetter">
+                            <i class="bi bi-envelope-fill text-primary me-1"></i> Generate Tailored Cover Letter
+                        </label>
+                        <p class="text-muted small mb-0 mt-1 ms-4">Crafts an authentic 3-paragraph cover letter tailored directly to the hiring team and required tech stack.</p>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-analyze w-100 py-3 fw-bold rounded-pill shadow fs-5">
+                    <i class="bi bi-stars me-2"></i> Analyze JD & Craft Application
+                </button>
+            </form>
+
+            <div class="text-center mt-4 pt-2 border-top">
+                <a href="{{ url_for('admin_dashboard') }}" class="text-decoration-none text-secondary small fw-bold">
+                    <i class="bi bi-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+    </script>
 </body>
 </html>

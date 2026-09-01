@@ -670,22 +670,102 @@ def load_user(user_id):
 def get_structured_data_for_ai():
     """Converts DB data into a structured JSON string for the LLM."""
     profile = Profile.query.first()
-    projects = Project.query.all()
-    exp = ResumeItem.query.filter_by(category='work').all()
-    edu = ResumeItem.query.filter_by(category='education').all()
-    skills = Skill.query.all()
+    projects = Project.query.order_by(Project.order.asc()).all()
+    exp = ResumeItem.query.filter_by(category='work').order_by(ResumeItem.order.asc()).all()
+    edu = ResumeItem.query.filter_by(category='education').order_by(ResumeItem.order.asc()).all()
+    honors = ResumeItem.query.filter_by(category='honor').order_by(ResumeItem.order.asc()).all()
+    papers = ResumeItem.query.filter_by(category='paper').order_by(ResumeItem.order.asc()).all()
+    skills = Skill.query.order_by(Skill.order.asc()).all()
     
     data = {
         "profile": {
             "name": profile.full_name if profile else "",
-            "about": profile.about_me if profile else ""
+            "about": profile.about_me if profile else "",
+            "interests": profile.interests if profile else ""
         },
-        "experience": [{"id": i.id, "title": i.title, "org": i.organization, "desc": i.description} for i in exp],
-        "projects": [{"id": p.id, "title": p.title, "desc": p.short_description} for p in projects],
-        "skills": [{"id": s.id, "name": s.name} for s in skills],
-        "education": [{"id": e.id, "title": e.title} for e in edu]
+        "experience": [{"id": i.id, "title": i.title, "org": i.organization, "duration": i.duration, "desc": i.description} for i in exp],
+        "projects": [{"id": p.id, "title": p.title, "tags": p.tags, "desc": p.short_description, "details": p.full_content} for p in projects],
+        "skills": [{"id": s.id, "name": s.name, "level": s.level} for s in skills],
+        "education": [{"id": e.id, "title": e.title, "org": e.organization, "duration": e.duration, "desc": e.description} for e in edu],
+        "honors": [{"id": h.id, "title": h.title, "org": h.organization, "desc": h.description} for h in honors],
+        "papers": [{"id": pp.id, "title": pp.title, "org": pp.organization, "desc": pp.description} for pp in papers]
     }
     return json.dumps(data, ensure_ascii=False)
+
+def build_custom_resume_data(form):
+    """Safely builds in-memory customized resume data from form inputs without mutating the database."""
+    target_role = form.get('target_role', '')
+    custom_summary = form.get('custom_summary', '')
+    
+    ids = {
+        'exp': form.getlist('selected_exp'),
+        'proj': form.getlist('selected_proj'),
+        'edu': form.getlist('selected_edu'),
+        'skill': form.getlist('selected_skills'),
+        'honor': form.getlist('selected_honors'),
+        'paper': form.getlist('selected_papers')
+    }
+    
+    def process_items(model, id_list, desc_prefix=None):
+        if not id_list: return []
+        items = model.query.filter(model.id.in_(id_list)).all()
+        item_map = {str(i.id): i for i in items}
+        ordered = []
+        for i_id in id_list:
+            if str(i_id) in item_map:
+                orig_obj = item_map[str(i_id)]
+                if model == Project:
+                    desc = form.get(f'{desc_prefix}_{i_id}', orig_obj.short_description)
+                    ordered.append(type('ProjectMock', (), {
+                        'id': orig_obj.id,
+                        'title': orig_obj.title,
+                        'status': orig_obj.status,
+                        'short_description': desc,
+                        'full_content': '',
+                        'github_link': orig_obj.github_link,
+                        'video_link': orig_obj.video_link,
+                        'live_link': orig_obj.live_link,
+                        'tags': orig_obj.tags,
+                        'media_file': orig_obj.media_file,
+                        'order': orig_obj.order
+                    })())
+                elif model == Skill:
+                    ordered.append(orig_obj)
+                else: # ResumeItem
+                    desc = form.get(f'{desc_prefix}_{i_id}', orig_obj.description)
+                    ordered.append(type('ResumeItemMock', (), {
+                        'id': orig_obj.id,
+                        'category': orig_obj.category,
+                        'title': orig_obj.title,
+                        'organization': orig_obj.organization,
+                        'duration': orig_obj.duration,
+                        'description': desc,
+                        'order': orig_obj.order
+                    })())
+        return ordered
+
+    profile = Profile.query.first()
+    data = {
+        'full_name': profile.full_name if profile else '',
+        'mobile': profile.mobile if profile else '',
+        'email': profile.email if profile else '',
+        'github': profile.github if profile else '',
+        'linkedin': profile.linkedin if profile else '',
+        'show_mobile': profile.show_mobile if profile else True,
+        'show_email': profile.show_email if profile else True,
+        'show_github': profile.show_github if profile else True,
+        'show_linkedin': profile.show_linkedin if profile else True,
+        'address': profile.address if profile else '',
+        'target_role': target_role,
+        'summary': custom_summary,
+        'experience': process_items(ResumeItem, ids['exp'], 'desc_exp'),
+        'projects': process_items(Project, ids['proj'], 'desc_proj'),
+        'education': process_items(ResumeItem, ids['edu'], 'desc_edu'),
+        'skills': process_items(Skill, ids['skill']),
+        'honors': process_items(ResumeItem, ids['honor'], 'desc_honor'),
+        'papers': process_items(ResumeItem, ids['paper'], 'desc_paper')
+    }
+    return data
 
 def get_ai_settings():
     settings = AISettings.query.first()
@@ -1303,10 +1383,22 @@ def reset_ai_usage():
 @app.route('/admin/ai-resume', methods=['GET', 'POST'])
 @login_required
 def ai_resume_start():
+    profile = Profile.query.first()
+    active_template = profile.resume_template if profile and profile.resume_template else 'modern'
+
     if request.method == 'GET':
-        return render_template('admin_ai_resume.html')
+        return render_template('admin_ai_resume.html', 
+                               templates_list=RESUME_TEMPLATES, 
+                               active_template=active_template)
     
-    job_description = request.form.get('job_description')
+    job_description = request.form.get('job_description', '').strip()
+    template_id = request.form.get('template_id', active_template)
+    target_tone = request.form.get('target_tone', 'technical_impact')
+    generate_cover_letter = request.form.get('generate_cover_letter', 'true') == 'true'
+
+    if not job_description:
+        flash("Please provide a Job Description.", "warning")
+        return redirect(url_for('ai_resume_start'))
     
     # 1. RAG Context
     rag_context = get_relevant_context(job_description, k=15)
@@ -1314,46 +1406,67 @@ def ai_resume_start():
     # 2. Raw Database Data
     my_data_json = get_structured_data_for_ai()
     
-    # 3. Robust Prompt
+    tone_instructions = {
+        'technical_impact': 'Focus heavily on engineering problem-solving, concrete technical depth, and specific tool usage.',
+        'direct_concise': 'Be exceptionally direct and metric-driven with high information density and zero filler adjectives.',
+        'leadership': 'Emphasize architectural decision making, scalability, system design, and technical initiative.',
+        'research': 'Emphasize scientific rigor, data pipelines, model benchmarks, publications, and algorithmic design.'
+    }.get(target_tone, 'Focus on engineering problem-solving and concrete technical impact.')
+
+    # 3. Robust Human-Tone Anti-AI Prompt
     prompt = f"""
-    You are a Senior Technical Resume Writer.
-    Your Goal: Tailor my resume for a specific Job Description (JD).
-    
-    CRITICAL STYLE GUIDELINES:
-    1. No AI Clichés (e.g., "unleashing", "delving", "tapestry").
-    2. Scientific & Precise verbs ("Engineered", "Optimized", "Architected").
-    3. Focus on Results (PAR Method).
-    
-    INPUT DATA:
-    - Target JD: {job_description}
-    - My Background (RAG): {rag_context}
-    - DB Items (JSON): {my_data_json}
-    
-    TASK:
-    1. Extract "target_role".
-    2. Write "custom_summary" (Professional & Specific).
-    3. Select IDs for relevant Experience, Projects, Skills (Keep Education).
-    4. Rewrite descriptions for selected items to match JD keywords.
-    
-    OUTPUT JSON FORMAT ONLY:
-    {{
-        "target_role": "String",
-        "custom_summary": "String",
-        "selected_exp_ids": [Int],
-        "selected_proj_ids": [Int],
-        "selected_skill_ids": [Int],
-        "selected_edu_ids": [Int],
-        "selected_honor_ids": [],
-        "selected_paper_ids": [],
-        "tailored_descriptions": {{
-            "exp_ID": "Rewritten description...",
-            "proj_ID": "Rewritten description..."
-        }}
-    }}
-    """
+You are an Elite Technical Recruiter and Expert Human Resume & Cover Letter Writer.
+Your Task: Analyze the provided Job Description (JD), match it with my real background (from RAG context and database), and craft a deeply tailored, 100% human-sounding resume and cover letter.
+
+=== STRICT ANTI-AI & HUMAN TONE MANDATE ===
+1. ABSOLUTELY BANNED AI CLICHÉS & BUZZWORDS:
+   Do NOT use: "spearhead", "delve", "testament", "pinnacle", "synergy", "tapestry", "seamless", "dynamic", "thrilled to apply", "unleash", "meticulously", "beacon", "navigating the complexities", "cutting-edge solutions", "game-changer", "passionate professional", "transformative".
+2. HUMAN WRITING RULES:
+   - Use active, natural engineering verbs: "Built", "Optimized", "Refactored", "Architected", "Trained", "Deployed", "Reduced", "Integrated", "Implemented".
+   - Structure every rewritten point with concrete substance: [Action Verb] + [Exact Tech/Context] + [Problem Solved] + [Quantifiable/Concrete Outcome].
+   - Keep bullet points concise and dense (1-2 lines per bullet).
+   - NEVER fabricate fake work experiences, fake companies, or fake degrees. Use only the candidate's real items provided below.
+3. COVER LETTER RULES:
+   - Tone: A genuine, confident engineer or specialist talking peer-to-peer with a hiring manager or engineering lead.
+   - Paragraph 1: Direct, hook-driven opening stating relevance to the specific technical challenge or mission of the target role/company (avoid generic "I am writing to apply for...").
+   - Paragraph 2 & 3: Connect 1-2 specific projects or work achievements from the candidate's background directly to the requirements in the JD.
+   - Closing: Crisp, professional sign-off.
+
+=== INPUT DATA ===
+Target Job Description:
+{job_description}
+
+Tone Directive:
+{tone_instructions}
+
+RAG Background Knowledge:
+{rag_context}
+
+Structured Candidate Database Items:
+{my_data_json}
+
+=== REQUIRED JSON OUTPUT FORMAT ONLY ===
+{{
+    "target_role": "Clean, standard Job Title matching the JD",
+    "company_name": "Target Company Name if found in JD, or empty string",
+    "extracted_skills": ["Key Skill 1", "Key Skill 2", "Key Skill 3", "Key Skill 4", "Key Skill 5", "Key Skill 6"],
+    "match_analysis": "2-3 crisp sentences summarizing why candidate matches this JD and how the application was positioned.",
+    "custom_summary": "Crisp 3-4 sentence professional summary tailored to this position without AI fluff.",
+    "selected_exp_ids": [1, 2],
+    "selected_proj_ids": [1, 2, 3],
+    "selected_skill_ids": [1, 2, 3],
+    "selected_edu_ids": [1],
+    "selected_honor_ids": [],
+    "selected_paper_ids": [],
+    "tailored_descriptions": {{
+        "exp_1": "Tailored concise description/bullets for this experience...",
+        "proj_1": "Tailored concise description emphasizing relevant tech stack and outcomes..."
+    }},
+    "cover_letter": "Complete 3-4 paragraph authentic cover letter text..."
+}}
+"""
     
     try:
-        # Use robust ask_ai with JSON mode enabled
         ai_content = ask_ai(
             system_prompt="You are a JSON-speaking Resume Assistant. Output valid JSON only.", 
             user_prompt=prompt,
@@ -1361,18 +1474,19 @@ def ai_resume_start():
             context_type="resume"
         )
         
-        # Clean up Markdown code blocks if present (common with DeepSeek/Llama)
+        # Clean up Markdown code blocks if present
         if "```json" in ai_content:
             ai_content = ai_content.split("```json")[1].split("```")[0]
         elif "```" in ai_content:
             ai_content = ai_content.split("```")[1].split("```")[0]
             
         ai_data = json.loads(ai_content)
-        
         session['ai_suggestion'] = ai_data
 
         return render_template('admin_ai_result.html', 
                                ai_data=ai_data,
+                               selected_template=template_id,
+                               templates_list=RESUME_TEMPLATES,
                                profile=Profile.query.first(),
                                projects=Project.query.order_by(Project.order.asc()).all(),
                                skills=Skill.query.order_by(Skill.order.asc()).all(),
@@ -1382,74 +1496,64 @@ def ai_resume_start():
                                papers=ResumeItem.query.filter_by(category='paper').order_by(ResumeItem.order.asc()).all())
         
     except Exception as e:
-        flash(f"AI Error: {str(e)}", "danger")
-        print(f"DEBUG ERROR: {e}")
+        flash(f"AI Generation Error: {str(e)}", "danger")
+        print(f"DEBUG ERROR in AI Resume: {e}")
         return redirect(url_for('ai_resume_start'))
+
+@app.route('/admin/ai-resume/preview-live', methods=['POST'])
+@login_required
+def ai_resume_preview_live():
+    """Renders real-time live HTML document preview inside the studio iframe."""
+    preview_type = request.form.get('preview_type', 'resume')
+    template_id = request.form.get('template_id') or 'modern'
+    tpl_info = RESUME_TEMPLATES.get(template_id, RESUME_TEMPLATES['modern'])
+    profile = Profile.query.first()
+    
+    if preview_type == 'cover_letter':
+        target_role = request.form.get('target_role', '')
+        company_name = request.form.get('company_name', '')
+        cover_letter_text = request.form.get('cover_letter_text', '')
+        paragraphs = [p.strip() for p in cover_letter_text.split('\n\n') if p.strip()]
+        if not paragraphs and cover_letter_text.strip():
+            paragraphs = [p.strip() for p in cover_letter_text.split('\n') if p.strip()]
+        letter_date = datetime.now().strftime("%B %d, %Y")
+        
+        return render_template('pdf_templates/cover_letter_template.html',
+                               profile=profile,
+                               target_role=target_role,
+                               company_name=company_name,
+                               cover_letter_paragraphs=paragraphs,
+                               theme_color=tpl_info.get('theme_color', '#2563eb'),
+                               letter_date=letter_date)
+    else:
+        data = build_custom_resume_data(request.form)
+        return render_template(tpl_info['template_file'],
+                               profile=profile,
+                               projects=data['projects'],
+                               items=data['experience'] + data['education'] + data['honors'] + data['papers'],
+                               skills=data['skills'],
+                               target_role=data['target_role'],
+                               summary=data['summary'],
+                               host_url=request.host_url.rstrip('/'),
+                               request=request,
+                               data=data)
 
 @app.route('/admin/ai-resume/generate', methods=['POST'])
 @login_required
 def ai_resume_generate():
-    target_role = request.form.get('target_role')
-    custom_summary = request.form.get('custom_summary')
-    
-    ids = {
-        'exp': request.form.getlist('selected_exp'),
-        'proj': request.form.getlist('selected_proj'),
-        'edu': request.form.getlist('selected_edu'),
-        'skill': request.form.getlist('selected_skills'),
-        'honor': request.form.getlist('selected_honors'),
-        'paper': request.form.getlist('selected_papers')
-    }
-
-    def process(model, id_list, desc_prefix=None):
-        if not id_list: return []
-        items = model.query.filter(model.id.in_(id_list)).all()
-        item_map = {str(i.id): i for i in items}
-        ordered = []
-        for i_id in id_list:
-            if i_id in item_map:
-                obj = item_map[i_id]
-                if desc_prefix:
-                    new_text = request.form.get(f'{desc_prefix}_{i_id}')
-                    if new_text:
-                        if model == Project:
-                            obj.short_description = new_text
-                            obj.full_content = ""
-                        else:
-                            obj.description = new_text
-                ordered.append(obj)
-        return ordered
-    data = {
-        'full_name': Profile.query.first().full_name,
-        'mobile': Profile.query.first().mobile,
-        'email': Profile.query.first().email,
-        'github': Profile.query.first().github,
-        'linkedin': Profile.query.first().linkedin,
-        'show_mobile': Profile.query.first().show_mobile,
-        'show_email': Profile.query.first().show_email,
-        'show_github': Profile.query.first().show_github,
-        'show_linkedin': Profile.query.first().show_linkedin,
-        'address': Profile.query.first().address,
-        'target_role': target_role,
-        'summary': custom_summary,
-        'experience': process(ResumeItem, ids['exp'], 'desc_exp'),
-        'projects': process(Project, ids['proj'], 'desc_proj'),
-        'education': process(ResumeItem, ids['edu'], 'desc_edu'),
-        'skills': process(Skill, ids['skill']),
-        'honors': process(ResumeItem, ids['honor'], 'desc_honor'),
-        'papers': process(ResumeItem, ids['paper'], 'desc_paper')
-    }
-
-    active_tpl_key = request.form.get('template_id') or (Profile.query.first().resume_template if Profile.query.first() and Profile.query.first().resume_template else 'modern')
-    tpl_info = RESUME_TEMPLATES.get(active_tpl_key, RESUME_TEMPLATES['modern'])
+    """Generates and downloads the personalized resume PDF."""
+    template_id = request.form.get('template_id') or 'modern'
+    tpl_info = RESUME_TEMPLATES.get(template_id, RESUME_TEMPLATES['modern'])
+    profile = Profile.query.first()
+    data = build_custom_resume_data(request.form)
 
     rendered = render_template(tpl_info['template_file'],
-                               profile=Profile.query.first(),
+                               profile=profile,
                                projects=data['projects'],
                                items=data['experience'] + data['education'] + data['honors'] + data['papers'],
                                skills=data['skills'],
-                               target_role=target_role,
-                               summary=custom_summary,
+                               target_role=data['target_role'],
+                               summary=data['summary'],
                                host_url=request.host_url.rstrip('/'),
                                request=request,
                                data=data)
@@ -1460,8 +1564,47 @@ def ai_resume_generate():
         
     response = make_response(pdf.getvalue())
     response.headers['Content-Type'] = 'application/pdf'
-    role_filename = (target_role or "Custom").replace(" ", "_")
-    response.headers['Content-Disposition'] = f'attachment; filename=AI_Resume_{role_filename}.pdf'
+    role_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', data['target_role'] or "Custom")
+    response.headers['Content-Disposition'] = f'attachment; filename=AI_Resume_{role_clean}.pdf'
+    return response
+
+@app.route('/admin/ai-resume/cover-letter-pdf', methods=['POST'])
+@login_required
+def ai_cover_letter_generate():
+    """Generates and downloads the tailored cover letter as a matching PDF."""
+    template_id = request.form.get('template_id') or 'modern'
+    tpl_info = RESUME_TEMPLATES.get(template_id, RESUME_TEMPLATES['modern'])
+    theme_color = tpl_info.get('theme_color', '#2563eb')
+    
+    target_role = request.form.get('target_role', '')
+    company_name = request.form.get('company_name', '')
+    cover_letter_text = request.form.get('cover_letter_text', '')
+    
+    paragraphs = [p.strip() for p in cover_letter_text.split('\n\n') if p.strip()]
+    if not paragraphs and cover_letter_text.strip():
+        paragraphs = [p.strip() for p in cover_letter_text.split('\n') if p.strip()]
+        
+    profile = Profile.query.first()
+    letter_date = datetime.now().strftime("%B %d, %Y")
+    
+    rendered = render_template('pdf_templates/cover_letter_template.html',
+                               profile=profile,
+                               target_role=target_role,
+                               company_name=company_name,
+                               cover_letter_paragraphs=paragraphs,
+                               theme_color=theme_color,
+                               letter_date=letter_date)
+                               
+    pdf = BytesIO()
+    pisa_status = pisa.CreatePDF(BytesIO(rendered.encode("UTF-8")), dest=pdf)
+    if pisa_status.err:
+        return f"PDF Error: {pisa_status.err}"
+        
+    response = make_response(pdf.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    role_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', target_role or "Role")
+    company_clean = f"_{re.sub(r'[^a-zA-Z0-9_-]', '_', company_name)}" if company_name else ""
+    response.headers['Content-Disposition'] = f'attachment; filename=Cover_Letter_{role_clean}{company_clean}.pdf'
     return response
 
 # --- Manual Resume Builder ---
