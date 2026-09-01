@@ -71,9 +71,24 @@ with app.app_context():
             cols = [row[1] for row in result.fetchall()]
             if 'resume_template' not in cols:
                 conn.execute(text("ALTER TABLE profile ADD COLUMN resume_template VARCHAR(50) DEFAULT 'modern'"))
-                conn.commit()
+                
+            # AI Settings dedicated resume columns auto-migration
+            result_ai = conn.execute(text("PRAGMA table_info(ai_settings)"))
+            ai_cols = [row[1] for row in result_ai.fetchall()]
+            if 'resume_provider_name' not in ai_cols:
+                conn.execute(text("ALTER TABLE ai_settings ADD COLUMN resume_provider_name VARCHAR(100) DEFAULT 'OpenRouter'"))
+            if 'resume_api_url' not in ai_cols:
+                conn.execute(text("ALTER TABLE ai_settings ADD COLUMN resume_api_url VARCHAR(200) DEFAULT 'https://openrouter.ai/api/v1/chat/completions'"))
+            if 'resume_api_key' not in ai_cols:
+                conn.execute(text("ALTER TABLE ai_settings ADD COLUMN resume_api_key VARCHAR(200) DEFAULT ''"))
+            if 'resume_model_name' not in ai_cols:
+                conn.execute(text("ALTER TABLE ai_settings ADD COLUMN resume_model_name VARCHAR(100) DEFAULT 'google/gemini-2.0-flash-001'"))
+            if 'resume_enable_reasoning' not in ai_cols:
+                conn.execute(text("ALTER TABLE ai_settings ADD COLUMN resume_enable_reasoning BOOLEAN DEFAULT 0"))
+                
+            conn.commit()
     except Exception as e:
-        pass
+        print(f"Auto-migration note: {e}")
 
 # --- Jinja Template Filters & Helpers ---
 def country_code_to_flag(code):
@@ -788,48 +803,65 @@ def get_ai_settings():
 def ask_ai(system_prompt, user_prompt, json_mode=False, context_type="chat"):
     """
     Sends a request to the configured AI API.
-    Enforces quota limits based on context_type ('chat' or 'resume').
+    Uses separate configuration (provider, api_url, api_key, model_name, reasoning)
+    for 'chat' vs 'resume' tasks.
     """
     settings = get_ai_settings()
     
-    # Enforce request limits
-    if context_type == "chat":
-        if settings.used_chat_requests >= settings.max_chat_requests:
-            return "Oops! My AI brain needs a little coffee break. The daily chat quota has been reached, but feel free to explore my portfolio and reach out via email!"
-    elif context_type == "resume":
+    # Select configuration based on context_type
+    if context_type == "resume":
         if settings.used_resume_requests >= settings.max_resume_requests:
             raise ValueError("AI quota limit reached for Resume Strategist. Reset or increase limits in Admin > AI Settings.")
+        
+        provider_name = settings.resume_provider_name or settings.provider_name or "OpenRouter"
+        api_url = settings.resume_api_url or settings.api_url or "https://openrouter.ai/api/v1/chat/completions"
+        api_key = (settings.resume_api_key or settings.api_key or "").strip()
+        model_name = settings.resume_model_name or "google/gemini-2.0-flash-001"
+        enable_reasoning = bool(settings.resume_enable_reasoning)
+        temperature = 0.2
+    else:
+        # Default / Chatbot configuration
+        if settings.used_chat_requests >= settings.max_chat_requests:
+            return "Oops! My AI brain needs a little coffee break. The daily chat quota has been reached, but feel free to explore my portfolio and reach out via email!"
+        
+        provider_name = settings.provider_name or "OpenRouter"
+        api_url = settings.api_url or "https://openrouter.ai/api/v1/chat/completions"
+        api_key = (settings.api_key or "").strip()
+        model_name = settings.model_name or "openrouter/free"
+        enable_reasoning = bool(settings.enable_reasoning)
+        temperature = 0.4
 
-    if not settings.api_key:
-        raise ValueError("AI API Key is missing! Please configure your API key in Admin > AI Settings.")
+    if not api_key:
+        target_service = "AI Resume Strategist" if context_type == "resume" else "Website Chatbot"
+        raise ValueError(f"{target_service} API Key is missing! Please configure your API key in Admin > AI Settings.")
 
-    print(f"Connecting to AI Model: {settings.model_name} via {settings.provider_name}...")
+    print(f"Connecting to AI [{context_type}]: {model_name} via {provider_name}...")
     
     headers = {
-        "Authorization": f"Bearer {settings.api_key.strip()}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://your-site.com", 
-        "X-Title": "My Portfolio Resume Builder"
+        "X-Title": f"Portfolio {context_type.capitalize()}"
     }
     
     payload = {
-        "model": settings.model_name,
+        "model": model_name,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        "temperature": 0.3,
+        "temperature": temperature,
         "max_tokens": 3000
     }
     
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
         
-    if settings.enable_reasoning and not json_mode:
+    if enable_reasoning and not json_mode:
         payload["reasoning"] = {"enabled": True}
         
     try:
-        response = requests.post(settings.api_url, headers=headers, data=json.dumps(payload), timeout=45)
+        response = requests.post(api_url, headers=headers, data=json.dumps(payload), timeout=45)
         
         if response.status_code != 200:
             error_msg = f"HTTP {response.status_code}"
@@ -1381,17 +1413,24 @@ def admin_ai_settings():
     settings = get_ai_settings()
         
     if request.method == 'POST':
-        settings.provider_name = request.form.get('provider_name')
-        settings.api_url = request.form.get('api_url')
-        settings.api_key = request.form.get('api_key')
-        settings.model_name = request.form.get('model_name')
+        # 1. Chatbot Configuration
+        settings.provider_name = request.form.get('provider_name', 'OpenRouter')
+        settings.api_url = request.form.get('api_url', 'https://openrouter.ai/api/v1/chat/completions')
+        settings.api_key = request.form.get('api_key', '')
+        settings.model_name = request.form.get('model_name', 'openrouter/free')
         settings.enable_reasoning = request.form.get('enable_reasoning') == 'on'
-        
         settings.max_chat_requests = int(request.form.get('max_chat_requests', 50))
+        
+        # 2. Resume Strategist Dedicated Configuration
+        settings.resume_provider_name = request.form.get('resume_provider_name', 'OpenRouter')
+        settings.resume_api_url = request.form.get('resume_api_url', 'https://openrouter.ai/api/v1/chat/completions')
+        settings.resume_api_key = request.form.get('resume_api_key', '')
+        settings.resume_model_name = request.form.get('resume_model_name', 'google/gemini-2.0-flash-001')
+        settings.resume_enable_reasoning = request.form.get('resume_enable_reasoning') == 'on'
         settings.max_resume_requests = int(request.form.get('max_resume_requests', 10))
         
         db.session.commit()
-        flash('AI Settings updated successfully!', 'success')
+        flash('AI Settings updated successfully! Chatbot and Resume Strategist models saved.', 'success')
         return redirect(url_for('admin_ai_settings'))
         
     return render_template('admin_ai_settings.html', settings=settings)
@@ -1409,19 +1448,28 @@ def reset_ai_usage():
 @app.route('/admin/ai-settings/test', methods=['POST'])
 @login_required
 def test_ai_connection():
+    test_type = request.form.get('test_type', 'resume')
     settings = get_ai_settings()
-    if not settings.api_key:
-        flash("Cannot test: API Key is missing. Please enter your API Key in the field below and save.", "warning")
+    
+    target_key = settings.resume_api_key if test_type == 'resume' else settings.api_key
+    if not target_key and test_type == 'resume':
+        target_key = settings.api_key  # safe fallback
+        
+    if not target_key:
+        label = "Resume Strategist" if test_type == 'resume' else "Chatbot"
+        flash(f"Cannot test {label}: API Key is missing. Please enter your API Key and save.", "warning")
         return redirect(url_for('admin_ai_settings'))
     
     import time
     start_time = time.time()
     try:
-        response = ask_ai("You are a system health check assistant.", "Respond with exactly: 'OK - Connected'", json_mode=False, context_type="chat")
+        response = ask_ai("You are a system health check assistant.", "Respond with exactly: 'OK - Connected'", json_mode=False, context_type=test_type)
         latency = int((time.time() - start_time) * 1000)
-        flash(f"⚡ Connection Successful! Model '{settings.model_name}' responded in {latency}ms: {response}", "success")
+        target_name = "Resume Strategist AI" if test_type == 'resume' else "Website Chatbot AI"
+        model_used = settings.resume_model_name if test_type == 'resume' else settings.model_name
+        flash(f"⚡ {target_name} Connected Successfully! Model '{model_used}' responded in {latency}ms: {response}", "success")
     except Exception as e:
-        flash(f"❌ Connection Failed: {str(e)}", "danger")
+        flash(f"❌ Connection Failed for {test_type.upper()}: {str(e)}", "danger")
         
     return redirect(url_for('admin_ai_settings'))
 

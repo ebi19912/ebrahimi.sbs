@@ -92,8 +92,11 @@ class Skill(db.Model):
 class AISettings(db.Model):
     """
     Settings for the AI integration, allowing dynamic configuration from the admin panel.
+    Separates configuration for the Chatbot and the AI Resume Strategist.
     """
     id = db.Column(db.Integer, primary_key=True)
+    
+    # --- 1. Website Chatbot Configuration ---
     provider_name = db.Column(db.String(100), default="OpenRouter")
     api_url = db.Column(db.String(200), default="https://openrouter.ai/api/v1/chat/completions")
     api_key = db.Column(db.String(200), default="")
@@ -102,6 +105,13 @@ class AISettings(db.Model):
     
     max_chat_requests = db.Column(db.Integer, default=50)
     used_chat_requests = db.Column(db.Integer, default=0)
+    
+    # --- 2. AI Resume & Cover Letter Strategist Dedicated Configuration ---
+    resume_provider_name = db.Column(db.String(100), default="OpenRouter")
+    resume_api_url = db.Column(db.String(200), default="https://openrouter.ai/api/v1/chat/completions")
+    resume_api_key = db.Column(db.String(200), default="")
+    resume_model_name = db.Column(db.String(100), default="google/gemini-2.0-flash-001")
+    resume_enable_reasoning = db.Column(db.Boolean, default=False)
     
     max_resume_requests = db.Column(db.Integer, default=10)
     used_resume_requests = db.Column(db.Integer, default=0)
