@@ -818,17 +818,18 @@ def ask_ai(system_prompt, user_prompt, json_mode=False, context_type="chat"):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ],
-        "temperature": 0.4
+        "temperature": 0.3,
+        "max_tokens": 3000
     }
     
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
         
-    if settings.enable_reasoning:
+    if settings.enable_reasoning and not json_mode:
         payload["reasoning"] = {"enabled": True}
         
     try:
-        response = requests.post(settings.api_url, headers=headers, data=json.dumps(payload), timeout=120)
+        response = requests.post(settings.api_url, headers=headers, data=json.dumps(payload), timeout=45)
         
         if response.status_code != 200:
             error_msg = f"HTTP {response.status_code}"
@@ -1403,6 +1404,25 @@ def reset_ai_usage():
     settings.used_resume_requests = 0
     db.session.commit()
     flash('AI usage counters have been reset to zero.', 'success')
+    return redirect(url_for('admin_ai_settings'))
+
+@app.route('/admin/ai-settings/test', methods=['POST'])
+@login_required
+def test_ai_connection():
+    settings = get_ai_settings()
+    if not settings.api_key:
+        flash("Cannot test: API Key is missing. Please enter your API Key in the field below and save.", "warning")
+        return redirect(url_for('admin_ai_settings'))
+    
+    import time
+    start_time = time.time()
+    try:
+        response = ask_ai("You are a system health check assistant.", "Respond with exactly: 'OK - Connected'", json_mode=False, context_type="chat")
+        latency = int((time.time() - start_time) * 1000)
+        flash(f"⚡ Connection Successful! Model '{settings.model_name}' responded in {latency}ms: {response}", "success")
+    except Exception as e:
+        flash(f"❌ Connection Failed: {str(e)}", "danger")
+        
     return redirect(url_for('admin_ai_settings'))
 
 # --- AI Resume Builder Logic ---
