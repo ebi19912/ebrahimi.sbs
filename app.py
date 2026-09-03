@@ -2603,7 +2603,7 @@ def sitemap():
     # Demos
     demos = DemoSite.query.filter_by(is_active=True).all()
     for demo in demos:
-        url = url_for('serve_demo_index', slug=demo.slug, _external=True)
+        url = url_for('serve_demo', slug=demo.slug, _external=True)
         pages.append([url, ten_days_ago])
         
     sitemap_xml = render_template('sitemap.xml', pages=pages)
