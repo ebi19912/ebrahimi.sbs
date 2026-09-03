@@ -23,7 +23,7 @@ import time
 from sqlalchemy import func, desc, distinct, or_
 
 # Import your database models
-from models import db, Admin, Project, ResumeItem, Skill, Profile, AISettings, DemoSite, PageVisit
+from models import db, Admin, Project, ResumeItem, Skill, Profile, AISettings, DemoSite, PageVisit, BlogPost
 
 # Import RAG utilities
 from rag_utils import initialize_vector_db, get_relevant_context
@@ -2502,6 +2502,122 @@ def run_async_indexing(app_instance):
             print("Background indexing finished!")
         except Exception as e:
             print(f"Background indexing failed: {e}")
+
+# --- Blog Routes (Public) ---
+@app.route('/blog')
+def blog_list():
+    posts = BlogPost.query.filter_by(is_published=True).order_by(BlogPost.created_at.desc()).all()
+    profile = Profile.query.first()
+    return render_template('blog_list.html', posts=posts, profile=profile)
+
+@app.route('/blog/<slug>')
+def blog_post(slug):
+    post = BlogPost.query.filter_by(slug=slug, is_published=True).first_or_404()
+    profile = Profile.query.first()
+    return render_template('blog_post.html', post=post, profile=profile)
+
+# --- Blog Routes (Admin) ---
+@app.route('/admin/blog', methods=['GET', 'POST'])
+@login_required
+def admin_blog_list():
+    posts = BlogPost.query.order_by(BlogPost.created_at.desc()).all()
+    return render_template('admin_blog_list.html', posts=posts)
+
+@app.route('/admin/blog/new', methods=['GET', 'POST'])
+@login_required
+def new_blog_post():
+    if request.method == 'POST':
+        title = request.form.get('title')
+        slug = request.form.get('slug')
+        content = request.form.get('content')
+        excerpt = request.form.get('excerpt')
+        is_published = 'is_published' in request.form
+        
+        post = BlogPost(title=title, slug=slug, content=content, excerpt=excerpt, is_published=is_published)
+        
+        if 'cover_image' in request.files:
+            file = request.files['cover_image']
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                post.cover_image = filename
+                
+        db.session.add(post)
+        db.session.commit()
+        flash('Blog post created!', 'success')
+        return redirect(url_for('admin_blog_list'))
+        
+    return render_template('admin_edit_blog.html', post=None)
+
+@app.route('/admin/blog/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_blog_post(id):
+    post = BlogPost.query.get_or_404(id)
+    if request.method == 'POST':
+        post.title = request.form.get('title')
+        post.slug = request.form.get('slug')
+        post.content = request.form.get('content')
+        post.excerpt = request.form.get('excerpt')
+        post.is_published = 'is_published' in request.form
+        
+        if 'cover_image' in request.files:
+            file = request.files['cover_image']
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                post.cover_image = filename
+                
+        db.session.commit()
+        flash('Blog post updated!', 'success')
+        return redirect(url_for('admin_blog_list'))
+        
+    return render_template('admin_edit_blog.html', post=post)
+
+@app.route('/admin/blog/delete/<int:id>', methods=['GET'])
+@login_required
+def delete_blog_post(id):
+    post = BlogPost.query.get_or_404(id)
+    db.session.delete(post)
+    db.session.commit()
+    flash('Blog post deleted!', 'success')
+    return redirect(url_for('admin_blog_list'))
+
+# --- Sitemap Route ---
+@app.route('/sitemap.xml')
+def sitemap():
+    import datetime
+    from flask import make_response
+    pages = []
+    ten_days_ago = (datetime.datetime.now() - datetime.timedelta(days=10)).date().isoformat()
+    
+    # Static pages
+    pages.append([url_for('index', _external=True), ten_days_ago])
+    pages.append([url_for('blog_list', _external=True), ten_days_ago])
+    
+    # Blog posts
+    posts = BlogPost.query.filter_by(is_published=True).order_by(BlogPost.created_at.desc()).all()
+    for post in posts:
+        url = url_for('blog_post', slug=post.slug, _external=True)
+        pages.append([url, post.created_at.date().isoformat()])
+        
+    # Demos
+    demos = DemoSite.query.filter_by(is_active=True).all()
+    for demo in demos:
+        url = url_for('serve_demo_index', slug=demo.slug, _external=True)
+        pages.append([url, ten_days_ago])
+        
+    sitemap_xml = render_template('sitemap.xml', pages=pages)
+    response = make_response(sitemap_xml)
+    response.headers["Content-Type"] = "application/xml"
+    return response
+
+@app.route('/robots.txt')
+def robots():
+    from flask import make_response
+    content = f"User-agent: *\nAllow: /\n\nSitemap: {url_for('sitemap', _external=True)}\n"
+    response = make_response(content)
+    response.headers["Content-Type"] = "text/plain"
+    return response
 
 if __name__ == '__main__':
     with app.app_context():

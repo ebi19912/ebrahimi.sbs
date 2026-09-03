@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog - {{ profile.full_name if profile else 'Portfolio' }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <h1 class="mb-4">Blog</h1>
+        <a href="/" class="btn btn-outline-secondary mb-4">Back to Home</a>
+        <div class="row">
+            {% for post in posts %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    {% if post.cover_image %}
+                    <img src="{{ url_for('static', filename='uploads/' + post.cover_image) }}" class="card-img-top" alt="{{ post.title }}" style="height: 200px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body">
+                        <h5 class="card-title">{{ post.title }}</h5>
+                        <p class="card-text text-muted small">{{ post.created_at.strftime('%B %d, %Y') }}</p>
+                        <p class="card-text">{{ post.excerpt }}</p>
+                        <a href="{{ url_for('blog_post', slug=post.slug) }}" class="btn btn-primary">Read More</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12"><p>No blog posts yet.</p></div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

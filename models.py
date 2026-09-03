@@ -151,4 +151,16 @@ class PageVisit(db.Model):
     os = db.Column(db.String(100), default='Other')
     is_bot = db.Column(db.Boolean, default=False)
     visitor_hash = db.Column(db.String(64), index=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+class BlogPost(db.Model):
+    """
+    Model for Blog Posts.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(250), nullable=False)
+    slug = db.Column(db.String(250), unique=True, nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    excerpt = db.Column(db.Text)
+    cover_image = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_published = db.Column(db.Boolean, default=True)

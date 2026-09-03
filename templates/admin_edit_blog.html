@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% if post %}Edit Post{% else %}New Post{% endif %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body class="bg-light">
+    <div class="container mt-5 mb-5">
+        <h2 class="mb-4">{% if post %}Edit Post{% else %}New Post{% endif %}</h2>
+        <form method="POST" enctype="multipart/form-data" class="card shadow p-4">
+            <div class="mb-3">
+                <label class="form-label">Title</label>
+                <input type="text" name="title" class="form-control" value="{{ post.title if post else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Slug (URL)</label>
+                <input type="text" name="slug" class="form-control" value="{{ post.slug if post else '' }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Cover Image</label>
+                <input type="file" name="cover_image" class="form-control">
+                {% if post and post.cover_image %}
+                    <small>Current: {{ post.cover_image }}</small>
+                {% endif %}
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Excerpt</label>
+                <textarea name="excerpt" class="form-control" rows="3">{{ post.excerpt if post else '' }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Content (HTML/Text)</label>
+                <textarea name="content" class="form-control" rows="10" required>{{ post.content if post else '' }}</textarea>
+            </div>
+            <div class="form-check mb-4">
+                <input class="form-check-input" type="checkbox" name="is_published" id="is_published" {% if post and post.is_published %}checked{% endif %}>
+                <label class="form-check-label" for="is_published">Published</label>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary">Save Post</button>
+                <a href="{{ url_for('admin_blog_list') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+<!-- Scroll to Top Button -->
+<button id="scrollToTopBtn" title="Go to top" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 9999; border: none; outline: none; background-color: #007bff; color: white; cursor: pointer; padding: 15px; border-radius: 50%; font-size: 18px; line-height: 1; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">&#8679;</button>
+<script>
+window.addEventListener('scroll', function() {
+  var btn = document.getElementById("scrollToTopBtn");
+  if (btn) {
+      if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+        btn.style.display = "block";
+      } else {
+        btn.style.display = "none";
+      }
+  }
+});
+var topBtn = document.getElementById('scrollToTopBtn');
+if(topBtn) {
+    topBtn.addEventListener('click', function(){
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+}
+</script>
+</body>
+</html>
+
