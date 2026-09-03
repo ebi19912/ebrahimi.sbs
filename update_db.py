@@ -22,3 +22,8 @@ except sqlite3.OperationalError:
 
 conn.commit()
 conn.close()
+from app import app, db
+app.app_context().push()
+db.create_all()
+print('Missing tables created successfully')
+
