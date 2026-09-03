@@ -74,11 +74,11 @@ def initialize_vector_db(app):
 
     # پاکسازی دیتابیس قبلی
     if os.path.exists(DB_PATH):
-        import shutil
         try:
-            shutil.rmtree(DB_PATH)
+            db = Chroma(persist_directory=DB_PATH, embedding_function=embedding_function)
+            db.delete_collection()
         except Exception as e:
-            print(f"Could not delete old DB: {e}")
+            print(f"Could not delete old DB collection: {e}")
 
     # ذخیره در ChromaDB
     Chroma.from_documents(
