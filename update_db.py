@@ -14,5 +14,11 @@ for table in tables:
     except sqlite3.OperationalError:
         print(f"Column 'order' already exists in {table}")
 
+try:
+    cursor.execute("ALTER TABLE profile ADD COLUMN favicon VARCHAR(100)")
+    print("Column 'favicon' added to profile")
+except sqlite3.OperationalError:
+    print("Column 'favicon' already exists in profile")
+
 conn.commit()
 conn.close()

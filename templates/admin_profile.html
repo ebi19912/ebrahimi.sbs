@@ -47,6 +47,21 @@
                             <small class="text-muted">Upload a clear photo (JPG/PNG).</small>
                         </div>
                     </div>
+
+                    <div class="row mb-4 align-items-center">
+                        <div class="col-md-3 text-center">
+                            {% if profile.favicon %}
+                                <img src="{{ url_for('static', filename='uploads/' + profile.favicon) }}" class="img-thumbnail" style="width: 50px; height: 50px; object-fit: contain;">
+                            {% else %}
+                                <div class="bg-secondary text-white d-flex justify-content-center align-items-center mx-auto" style="width: 50px; height: 50px; border-radius: 5px;">None</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-9">
+                            <label class="form-label fw-bold">Website Favicon</label>
+                            <input type="file" name="favicon" class="form-control">
+                            <small class="text-muted">Upload a favicon (ICO/PNG, recommended 32x32 or 64x64).</small>
+                        </div>
+                    </div>
                     <hr>
 
                     <div class="row">
@@ -199,5 +214,25 @@
             }
         });
     </script>
+<!-- Scroll to Top Button -->
+<button id="scrollToTopBtn" title="Go to top" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 9999; border: none; outline: none; background-color: #007bff; color: white; cursor: pointer; padding: 15px; border-radius: 50%; font-size: 18px; line-height: 1; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">&#8679;</button>
+<script>
+window.addEventListener('scroll', function() {
+  var btn = document.getElementById("scrollToTopBtn");
+  if (btn) {
+      if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+        btn.style.display = "block";
+      } else {
+        btn.style.display = "none";
+      }
+  }
+});
+var topBtn = document.getElementById('scrollToTopBtn');
+if(topBtn) {
+    topBtn.addEventListener('click', function(){
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+}
+</script>
 </body>
 </html>

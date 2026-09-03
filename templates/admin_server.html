@@ -1070,5 +1070,26 @@
         // Initial fetch of logs on tab activate
         document.getElementById('logs-tab').addEventListener('shown.bs.tab', fetchSystemLogs);
     </script>
+<!-- Scroll to Top Button -->
+<button id="scrollToTopBtn" title="Go to top" style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 9999; border: none; outline: none; background-color: #007bff; color: white; cursor: pointer; padding: 15px; border-radius: 50%; font-size: 18px; line-height: 1; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">&#8679;</button>
+<script>
+window.addEventListener('scroll', function() {
+  var btn = document.getElementById("scrollToTopBtn");
+  if (btn) {
+      if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+        btn.style.display = "block";
+      } else {
+        btn.style.display = "none";
+      }
+  }
+});
+var topBtn = document.getElementById('scrollToTopBtn');
+if(topBtn) {
+    topBtn.addEventListener('click', function(){
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+}
+</script>
 </body>
 </html>
+

@@ -44,6 +44,7 @@ class Profile(db.Model):
     personality = db.Column(db.Text)
     hobbies = db.Column(db.Text)
     profile_pic = db.Column(db.String(100)) # Filename of the uploaded picture
+    favicon = db.Column(db.String(100)) # Filename of the uploaded favicon
     resume_template = db.Column(db.String(50), default='modern') # Active resume PDF template
 
 class ResumeItem(db.Model):

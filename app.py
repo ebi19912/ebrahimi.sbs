@@ -1509,11 +1509,15 @@ def ai_resume_start():
     except Exception as e:
         print(f"Structured data extraction warning: {e}")
         my_data_json = "{}"
-
+    
     # 3. Stage 1 Prompt: Fast Job Compatibility & Fit Assessment
     fit_prompt = f"""
 You are a Senior Technical Career Strategist and Recruiter.
 Analyze this Job Description (JD) against my candidate profile and database to determine if it is a good fit and how well I match.
+Also select the best resume template and strategic tone for this job.
+
+Available Templates: 'modern' (Executive Modern), 'minimal' (Clean Mono), 'emerald' (Tech Emerald), 'ivy' (Classic Ivy League).
+Available Tones: 'technical_impact' (Engineering & High Technical Impact), 'direct_concise' (Ultra Direct & Metric-Driven), 'leadership' (Architecture & Technical Leadership), 'research' (Academic & Research Focus).
 
 === STRICT REALISM & ACCURACY ===
 - Be realistic and honest about the match score (0-100%).
@@ -1541,7 +1545,9 @@ Structured Candidate Database Items:
     "potential_gaps": ["Gap or secondary requirement 1", "Gap 2"],
     "recommended_strategy": "Strategic guidance on how to highlight candidate strengths for this role.",
     "top_matching_projects": ["Project Title 1", "Project Title 2"],
-    "top_matching_skills": ["Skill 1", "Skill 2", "Skill 3", "Skill 4", "Skill 5"]
+    "top_matching_skills": ["Skill 1", "Skill 2", "Skill 3", "Skill 4", "Skill 5"],
+    "recommended_template": "one of the available templates",
+    "recommended_tone": "one of the available tones"
 }}
 """
     try:
@@ -1573,14 +1579,16 @@ Structured Candidate Database Items:
             "potential_gaps": fit_data.get("potential_gaps") if isinstance(fit_data.get("potential_gaps"), list) else [],
             "recommended_strategy": str(fit_data.get("recommended_strategy") or "Highlight your most impactful technical projects and core architectures."),
             "top_matching_projects": fit_data.get("top_matching_projects") if isinstance(fit_data.get("top_matching_projects"), list) else [],
-            "top_matching_skills": fit_data.get("top_matching_skills") if isinstance(fit_data.get("top_matching_skills"), list) else []
+            "top_matching_skills": fit_data.get("top_matching_skills") if isinstance(fit_data.get("top_matching_skills"), list) else [],
+            "recommended_template": str(fit_data.get("recommended_template") or active_template),
+            "recommended_tone": str(fit_data.get("recommended_tone") or "technical_impact")
         }
 
         return render_template('admin_ai_fit_check.html',
                                fit_data=safe_fit_data,
                                job_description=job_description,
-                               selected_template=template_id,
-                               selected_tone=target_tone,
+                               selected_template=safe_fit_data['recommended_template'],
+                               selected_tone=safe_fit_data['recommended_tone'],
                                generate_cover_letter=generate_cover_letter,
                                templates_list=RESUME_TEMPLATES)
 
@@ -2155,6 +2163,13 @@ def edit_profile():
                 filename = secure_filename(file.filename)
                 file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                 profile.profile_pic = filename
+        
+        if 'favicon' in request.files:
+            file = request.files['favicon']
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                profile.favicon = filename
         
         db.session.commit()
         flash('Profile updated!', 'success')
