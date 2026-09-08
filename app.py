@@ -1817,8 +1817,14 @@ def ai_resume_generate():
         
     response = make_response(pdf.getvalue())
     response.headers['Content-Type'] = 'application/pdf'
-    role_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', data['target_role'] or "Custom")
-    response.headers['Content-Disposition'] = f'attachment; filename=AI_Resume_{role_clean}.pdf'
+    
+    role_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', data.get('target_role') or "Resume")
+    if profile and profile.full_name:
+        name_clean = re.sub(r'[^a-zA-Z0-9_-]', '_', profile.full_name.replace(' ', '_'))
+    else:
+        name_clean = "Rouhalah_Ebrahimi"
+        
+    response.headers['Content-Disposition'] = f'attachment; filename={role_clean}_{name_clean}.pdf'
     return response
 
 @app.route('/admin/ai-resume/cover-letter-pdf', methods=['POST'])
