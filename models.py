@@ -164,3 +164,46 @@ class BlogPost(db.Model):
     cover_image = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_published = db.Column(db.Boolean, default=True)
+
+class TutorialTopic(db.Model):
+    """
+    Model for Teaching / Tutorial Topics and Courses (موضوعات و دوره‌های آموزشی).
+    """
+    __tablename__ = 'tutorial_topics'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(250), nullable=False)
+    slug = db.Column(db.String(250), unique=True, nullable=False)
+    description = db.Column(db.Text)
+    icon = db.Column(db.String(100), default='bi-journal-code')
+    cover_image = db.Column(db.String(200))
+    order = db.Column(db.Integer, default=0)
+    is_published = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    lessons = db.relationship('TutorialLesson', backref='topic', lazy=True, cascade="all, delete-orphan", order_by="TutorialLesson.order.asc(), TutorialLesson.id.asc()")
+
+    @property
+    def published_lessons(self):
+        return [l for l in self.lessons if l.is_published]
+
+class TutorialLesson(db.Model):
+    """
+    Model for individual tutorial lessons/articles within a course (مطالب آموزشی و درس‌ها).
+    """
+    __tablename__ = 'tutorial_lessons'
+    id = db.Column(db.Integer, primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('tutorial_topics.id'), nullable=False)
+    title = db.Column(db.String(250), nullable=False)
+    slug = db.Column(db.String(250), nullable=False)
+    summary = db.Column(db.Text)
+    content = db.Column(db.Text, nullable=False) # Rich HTML content with formatted text & <pre><code> snippets
+    order = db.Column(db.Integer, default=0)
+    estimated_read_time = db.Column(db.String(50), default='5 min')
+    is_published = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        db.UniqueConstraint('topic_id', 'slug', name='_topic_lesson_slug_uc'),
+    )
+

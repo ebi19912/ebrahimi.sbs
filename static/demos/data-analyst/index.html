@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DataAnalyst Pro | سامانه آموزش گام‌به‌گام بوت‌کمپ تحلیل داده ۲۰۲۶</title>
+    <meta name="description" content="پلتفرم تعاملی و گام‌به‌گام آموزش تحلیل داده (SQL, Excel, Tableau, Power BI, Python, Pandas, Cloud & Career) همراه با کدهای اجرایی و تمرینات واقعی صنعتی.">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cabin: {
+                            yellow: '#FFCF68',
+                            taupe: '#B5A18B',
+                            cream: '#EDE8E1',
+                            dark: '#201F1E'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Vazirmatn', 'Cabin', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'Vazirmatn', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body class="bg-[#ECE7DF] text-[#201F1E] dark:bg-[#181716] dark:text-[#F5F2EB] min-h-screen antialiased selection:bg-[#FFCF68]/40 selection:text-[#201F1E] relative transition-colors duration-200 flex flex-col">
+
+    <!-- Ambient Glowing Background Orbs -->
+    <div class="bg-orb-1" aria-hidden="true"></div>
+    <div class="bg-orb-2" aria-hidden="true"></div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" aria-live="polite"></div>
+
+    <!-- 1. Sticky Top Header -->
+    <header class="sticky top-0 z-40 w-full border-b border-[#E3DDD4] bg-[#ECE7DF]/90 dark:bg-[#181716]/90 dark:border-[#383531] backdrop-blur-md">
+        <div class="max-w-6xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2">
+            
+            <!-- Brand Identity -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-[#FFCF68] text-[#201F1E] shadow-sm flex items-center justify-center font-bold shrink-0">
+                    <i data-lucide="graduation-cap" class="w-5 h-5 text-[#201F1E]" aria-hidden="true"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-base sm:text-lg tracking-tight text-[#201F1E] dark:text-white">DataAnalyst<span class="text-[#B5A18B] dark:text-[#FFCF68]">Bootcamp</span></span>
+                        <span class="hidden sm:inline-block px-2.5 py-0.5 text-[10px] font-bold bg-[#201F1E] text-white dark:bg-[#FFCF68] dark:text-[#201F1E] rounded-full">نسخه ۲۰۲۶ صنعتی</span>
+                    </div>
+                    <p class="text-[11px] text-[#7E776E] dark:text-[#B5AEA4] hidden md:block">آموزش صفحه به صفحه و گام‌به‌گام تحلیل داده همراه با کد و چالش‌های واقعی صنعت</p>
+                </div>
+            </div>
+
+            <!-- Controls: Table of Contents Button, Progress Pill & Theme Toggle -->
+            <div class="flex items-center gap-2 sm:gap-2.5">
+                
+                <!-- Prominent Table of Contents (فهرست) Button -->
+                <button type="button" id="openTocHeaderBtn" class="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#201F1E] hover:bg-[#33312E] dark:bg-[#FFCF68] dark:hover:bg-[#F5C252] text-white dark:text-[#201F1E] text-xs font-extrabold shadow-sm transition cursor-pointer" title="مشاهده فهرست کامل بخش‌ها و گام‌ها">
+                    <i data-lucide="list" class="w-4 h-4" aria-hidden="true"></i>
+                    <span>فهرست گام‌ها</span>
+                </button>
+
+                <!-- Step Progress Badge -->
+                <div id="overallProgressBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#EBF7EE] dark:bg-[#10B981]/15 border border-[#C6EBD0] dark:border-[#10B981]/30 rounded-full text-[#15803D] dark:text-[#34D399] text-xs font-bold">
+                    <i data-lucide="check-circle-2" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                    <span id="overallProgressText">۰٪ مطالعه شده</span>
+                </div>
+
+                <!-- Theme Toggle Button -->
+                <button type="button" id="themeToggleBtn" class="p-2 rounded-full bg-white hover:bg-[#F4EFEA] dark:bg-[#242220] dark:hover:bg-[#2D2B28] text-[#201F1E] dark:text-[#F5F2EB] border border-[#E3DDD4] dark:border-[#383531] text-xs font-medium transition cursor-pointer" title="تغییر تم روشن / تاریک" aria-label="تغییر تم روشن یا تاریک">
+                    <i data-lucide="moon" class="w-4 h-4" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Module Selector Bar (All 13 Folders) -->
+        <nav aria-label="فهرست پوشه‌های آموزشی" class="w-full bg-white/65 dark:bg-[#201F1E]/65 border-t border-[#E3DDD4] dark:border-[#383531] py-2">
+            <div class="max-w-6xl mx-auto px-3 sm:px-6 flex items-center gap-2 overflow-x-auto no-scrollbar" id="modulePillsContainer">
+                <!-- Dynamically populated by app.js -->
+            </div>
+        </nav>
+    </header>
+
+    <!-- 2. Main Step-by-Step Content Container -->
+    <main class="max-w-6xl w-full mx-auto px-3 sm:px-6 py-5 sm:py-7 space-y-5 relative z-10 flex-1">
+
+        <!-- Top Navigation & Step Progress Bar Card -->
+        <section aria-label="نوار پیمایش گام‌ها" class="crypto-card p-3.5 sm:p-4 flex flex-col gap-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <!-- Current Module & Step Counter -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span id="topModuleFolderBadge" class="px-2.5 py-1 rounded-full bg-[#FFCF68] text-[#201F1E] text-xs font-extrabold font-mono">01-SQL</span>
+                    <span id="topModuleTitleText" class="font-extrabold text-xs sm:text-sm text-[#201F1E] dark:text-white">پایگاه داده MySQL و زبان SQL</span>
+                    <span class="text-[#B5A18B]">•</span>
+                    <span id="topStepCounterText" class="text-xs font-extrabold text-[#15803D] dark:text-[#34D399]">گام ۱ از ۱۹</span>
+                </div>
+
+                <!-- Top Quick Prev / TOC / Next Controls -->
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <button type="button" id="topPrevStepBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F4EFEA] hover:bg-[#E6DFD5] dark:bg-[#2D2B28] dark:hover:bg-[#383531] text-[#201F1E] dark:text-[#F5F2EB] border border-[#E3DDD4] dark:border-[#383531] text-xs font-bold transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer" title="گام قبلی (کلید جهت‌نمای راست)">
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                        <span>گام قبلی</span>
+                    </button>
+
+                    <button type="button" id="topTocBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white hover:bg-[#F4EFEA] dark:bg-[#242220] dark:hover:bg-[#2D2B28] text-[#201F1E] dark:text-[#F5F2EB] border border-[#E3DDD4] dark:border-[#383531] text-xs font-bold transition cursor-pointer" title="باز کردن فهرست گام‌ها">
+                        <i data-lucide="list" class="w-3.5 h-3.5 text-[#B5A18B] dark:text-[#FFCF68]" aria-hidden="true"></i>
+                        <span>فهرست</span>
+                    </button>
+
+                    <button type="button" id="topNextStepBtn" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FFCF68] hover:bg-[#F5C252] text-[#201F1E] border border-[#E6B44C] text-xs font-extrabold shadow-sm transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer" title="گام بعدی (کلید جهت‌نمای چپ)">
+                        <span>گام بعدی</span>
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Clickable Numbered Step Dots for Current Module -->
+            <div class="flex items-center gap-1.5 overflow-x-auto py-1" id="stepDotsContainer" role="tablist" aria-label="شماره گام‌های این بخش">
+                <!-- Dynamically populated by app.js -->
+            </div>
+        </section>
+
+        <!-- Mode Tabs -->
+        <div id="assessmentTabsWrapper" class="flex items-center gap-2 mb-4 bg-[#F4EFEA] dark:bg-[#2D2B28] p-1.5 rounded-2xl w-max">
+            <button id="tabLearnBtn" class="px-4 py-2 rounded-xl text-sm font-bold bg-white dark:bg-[#383531] text-[#201F1E] dark:text-white shadow-sm transition">آموزش گام‌به‌گام</button>
+            <button id="tabFlashcardsBtn" class="px-4 py-2 rounded-xl text-sm font-bold text-[#8C847B] hover:text-[#201F1E] dark:hover:text-white transition">فلش‌کارت مرور</button>
+            <button id="tabQuizBtn" class="px-4 py-2 rounded-xl text-sm font-bold text-[#8C847B] hover:text-[#201F1E] dark:hover:text-white transition">آزمون ماژول</button>
+        </div>
+
+        <div id="flashcardsContainer" class="hidden crypto-card p-5 sm:p-8 space-y-6">
+            <h2 class="text-2xl font-black text-[#201F1E] dark:text-white mb-6">فلش‌کارت‌های مرور سریع</h2>
+            <div id="flashcardArea" class="flex flex-col items-center justify-center min-h-[300px] p-6 rounded-2xl bg-[#FFF8E7] dark:bg-[#242220] border-2 border-dashed border-[#F5C252]/60 cursor-pointer text-center group">
+                <div id="fcFront" class="text-xl font-bold text-[#201F1E] dark:text-white mb-4">...</div>
+                <div id="fcBack" class="hidden text-lg font-medium text-[#15803D] dark:text-[#34D399] p-4 bg-white dark:bg-[#2D2B28] rounded-xl w-full border border-[#C6EBD0] dark:border-[#383531]">...</div>
+                <div class="mt-8 text-xs text-[#8C847B] flex items-center gap-2 group-hover:text-[#201F1E] transition">
+                    <i data-lucide="mouse-pointer-click" class="w-4 h-4"></i> برای دیدن پاسخ کلیک کنید
+                </div>
+            </div>
+            <div class="flex justify-between items-center mt-6">
+                <button id="fcPrevBtn" class="px-4 py-2 rounded-xl bg-[#F4EFEA] dark:bg-[#2D2B28] text-sm font-bold">قبلی</button>
+                <span id="fcCount" class="text-sm font-bold text-[#8C847B]">۱ از ۴</span>
+                <button id="fcNextBtn" class="px-4 py-2 rounded-xl bg-[#FFCF68] text-[#201F1E] text-sm font-bold">بعدی</button>
+            </div>
+        </div>
+
+        <div id="quizContainer" class="hidden crypto-card p-5 sm:p-8 space-y-6">
+            <h2 class="text-2xl font-black text-[#201F1E] dark:text-white mb-6">آزمون جامع ماژول</h2>
+            <div id="quizArea" class="space-y-6">
+                <div class="p-6 rounded-2xl bg-[#F9F7F4] dark:bg-[#242220] border border-[#E3DDD4] dark:border-[#383531]">
+                    <h3 id="quizQuestionText" class="text-lg font-black text-[#201F1E] dark:text-white mb-6">...</h3>
+                    <div id="quizOptions" class="space-y-3">
+                        <!-- Options populated via JS -->
+                    </div>
+                </div>
+                <div id="quizExplanation" class="hidden p-4 rounded-xl bg-[#EBF7EE] dark:bg-[#10B981]/10 text-[#15803D] dark:text-[#34D399] font-medium text-sm">...</div>
+            </div>
+            <div class="flex justify-between items-center mt-6 border-t border-[#E3DDD4] dark:border-[#383531] pt-6">
+                <button id="quizPrevBtn" class="px-4 py-2 rounded-xl bg-[#F4EFEA] dark:bg-[#2D2B28] text-sm font-bold">سوال قبلی</button>
+                <span id="quizCount" class="text-sm font-bold text-[#8C847B]">۱ از ۳</span>
+                <button id="quizNextBtn" class="px-4 py-2 rounded-xl bg-[#FFCF68] text-[#201F1E] text-sm font-bold">سوال بعدی</button>
+            </div>
+        </div>
+
+        <div id="learnContainer">
+            <!-- Active Step Article Card -->
+            <article id="stepArticleCard" class="crypto-card p-5 sm:p-8 space-y-6">
+            
+            <!-- Step Header Metadata -->
+            <div class="border-b border-[#E3DDD4] dark:border-[#383531] pb-5 space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span id="stepTypeBadge" class="px-3 py-1 rounded-full bg-[#201F1E] text-[#FFCF68] dark:bg-[#FFCF68] dark:text-[#201F1E] text-xs font-extrabold">آموزش + کد + تمرین صنعتی</span>
+                        <span id="stepTimeBadge" class="px-3 py-1 rounded-full bg-[#F4EFEA] dark:bg-[#2D2B28] text-[#5C564F] dark:text-[#C4BDB3] text-xs font-semibold inline-flex items-center gap-1">
+                            <i data-lucide="clock" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                            <span id="stepTimeText">۲۵ دقیقه</span>
+                        </span>
+                        <span id="stepFilePathBadge" class="px-3 py-1 rounded-full bg-[#F4EFEA] dark:bg-[#2D2B28] text-[#5C564F] dark:text-[#C4BDB3] text-[11px] font-mono inline-flex items-center gap-1" dir="ltr">
+                            <i data-lucide="folder-open" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                            <span id="stepFilePathText">01-SQL/SQL_Handbook.md</span>
+                        </span>
+                    </div>
+
+                    <!-- Mark Step Completed Toggle -->
+                    <button type="button" id="toggleStepDoneBtn" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#E3DDD4] dark:border-[#383531] bg-[#F9F7F4] dark:bg-[#2D2B28] text-xs font-bold transition cursor-pointer">
+                        <i data-lucide="circle" class="w-4 h-4" aria-hidden="true"></i>
+                        <span>علامت‌گذاری به‌عنوان خوانده‌شده</span>
+                    </button>
+                </div>
+
+                <h1 id="stepMainTitle" class="text-xl sm:text-2xl lg:text-3xl font-black text-[#201F1E] dark:text-white leading-relaxed">
+                    در حال بارگذاری گام آموزشی...
+                </h1>
+
+                <p id="stepSummaryText" class="text-sm sm:text-base text-[#5C564F] dark:text-[#C4BDB3] font-medium leading-relaxed">
+                </p>
+            </div>
+
+            <!-- Main Educational Content (Rich HTML) -->
+            <div id="stepContentHtml" class="lesson-prose">
+                <!-- Populated dynamically -->
+            </div>
+
+            <!-- Structured Code Blocks Section (if provided separately) -->
+            <section id="stepCodeBlocksSection" class="space-y-4 pt-2 hidden" aria-label="کدها و کوئری‌های کاربردی این گام">
+                <div class="flex items-center gap-2 border-b border-[#E3DDD4] dark:border-[#383531] pb-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-[#201F1E] text-[#FFCF68] flex items-center justify-center">
+                        <i data-lucide="terminal" class="w-4 h-4" aria-hidden="true"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base sm:text-lg font-extrabold text-[#201F1E] dark:text-white">کدها و الگوهای اجرایی استاندارد در صنعت</h2>
+                        <p class="text-xs text-[#8C847B]">می‌توانید کدها را با یک کلیک کپی کرده و در محیط کاری خود اجرا کنید</p>
+                    </div>
+                </div>
+                <div id="stepCodeBlocksContainer" class="space-y-4"></div>
+            </section>
+
+            <!-- Real-World Industry Exercises & Scenarios Section -->
+            <section id="stepExercisesSection" class="space-y-4 pt-4 hidden" aria-label="تمرینات و چالش‌های واقعی در صنعت">
+                <div class="p-4 sm:p-5 rounded-2xl bg-[#FFF8E7] dark:bg-[#2D2B28] border border-[#F5C252]/60 dark:border-[#FFCF68]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-11 h-11 rounded-2xl bg-[#FFCF68] text-[#201F1E] flex items-center justify-center font-extrabold shadow-sm shrink-0">
+                            <i data-lucide="briefcase" class="w-5 h-5" aria-hidden="true"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-base sm:text-lg font-black text-[#201F1E] dark:text-[#FFCF68]">چالش‌ها و تمرینات واقعی در صنعت (Industry Case Problems)</h2>
+                            <p class="text-xs text-[#5C564F] dark:text-[#C4BDB3]">سوالات زیر بر اساس مشکلات واقعی شرکت‌ها طراحی شده‌اند. ابتدا خودتان راه‌حل را بنویسید و سپس پاسخ تشریحی را باز کنید.</p>
+                        </div>
+                    </div>
+                    <span id="exerciseCountBadge" class="px-3 py-1 rounded-full bg-[#201F1E] text-[#FFCF68] text-xs font-extrabold self-start sm:self-center shrink-0">۲ تمرین صنعتی</span>
+                </div>
+
+                <div id="stepExercisesContainer" class="space-y-4">
+                    <!-- Populated dynamically -->
+                </div>
+            </section>
+
+            <!-- Key Takeaways Box -->
+            <section id="stepTakeawaysSection" class="p-4 sm:p-5 rounded-2xl bg-[#EBF7EE]/80 dark:bg-[#10B981]/10 border border-[#C6EBD0] dark:border-[#10B981]/30 space-y-2.5 hidden" aria-label="نکات کلیدی این گام">
+                <div class="flex items-center gap-2 text-[#15803D] dark:text-[#34D399] font-extrabold text-sm">
+                    <i data-lucide="sparkles" class="w-4 h-4" aria-hidden="true"></i>
+                    <span>نکات طلایی و چکیده این گام برای محیط کار و مصاحبه:</span>
+                </div>
+                <ul id="stepTakeawaysList" class="list-disc pr-5 space-y-1.5 text-xs sm:text-sm text-[#201F1E] dark:text-[#F5F2EB] font-medium">
+                </ul>
+            </section>
+
+        </article>
+
+        <!-- Bottom Step-by-Step Navigation Bar (Large Arrows + TOC Button) -->
+        <nav aria-label="پیمایش صفحه به صفحه در انتهای گام" class="crypto-card p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            
+            <!-- Previous Step Arrow Button -->
+            <button type="button" id="bottomPrevStepBtn" class="flex-1 flex items-center gap-3 p-3.5 rounded-2xl bg-[#F4EFEA] hover:bg-[#E6DFD5] dark:bg-[#2D2B28] dark:hover:bg-[#383531] border border-[#E3DDD4] dark:border-[#383531] text-right transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer group">
+                <div class="w-10 h-10 rounded-xl bg-white dark:bg-[#242220] text-[#201F1E] dark:text-[#F5F2EB] flex items-center justify-center shrink-0 group-hover:translate-x-1 transition-transform">
+                    <i data-lucide="arrow-right" class="w-5 h-5" aria-hidden="true"></i>
+                </div>
+                <div class="overflow-hidden">
+                    <div class="text-[11px] font-bold text-[#8C847B]">گام قبلی</div>
+                    <div id="bottomPrevStepTitle" class="text-xs sm:text-sm font-extrabold text-[#201F1E] dark:text-white truncate">ابتدای بخش</div>
+                </div>
+            </button>
+
+            <!-- Center Table of Contents (فهرست) Button -->
+            <button type="button" id="bottomTocBtn" class="px-5 py-3.5 rounded-2xl bg-white hover:bg-[#F4EFEA] dark:bg-[#242220] dark:hover:bg-[#2D2B28] border border-[#E3DDD4] dark:border-[#383531] text-[#201F1E] dark:text-[#F5F2EB] font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 transition cursor-pointer shadow-sm">
+                <i data-lucide="list" class="w-4 h-4 text-[#B5A18B] dark:text-[#FFCF68]" aria-hidden="true"></i>
+                <span>فهرست کامل گام‌ها</span>
+            </button>
+
+            <!-- Next Step Arrow Button -->
+            <button type="button" id="bottomNextStepBtn" class="flex-1 flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-[#FFCF68] hover:bg-[#F5C252] text-[#201F1E] border border-[#E6B44C] text-left transition disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-md group">
+                <div class="overflow-hidden text-right">
+                    <div class="text-[11px] font-extrabold text-[#594D31]">گام بعدی (پیشنهادی)</div>
+                    <div id="bottomNextStepTitle" class="text-xs sm:text-sm font-black text-[#201F1E] truncate">گام ۲</div>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-[#201F1E] text-[#FFCF68] flex items-center justify-center shrink-0 group-hover:-translate-x-1 transition-transform">
+                    <i data-lucide="arrow-left" class="w-5 h-5" aria-hidden="true"></i>
+                </div>
+            </button>
+
+        </nav>
+        </div> <!-- end learnContainer -->
+
+    </main>
+
+    <!-- 3. Native Dialog Modal for Table of Contents (فهرست کامل بخش‌ها و گام‌ها) -->
+    <dialog id="tocDialog" closedby="any" aria-labelledby="tocDialogTitle">
+        <!-- Modal Header -->
+        <div class="p-4 sm:p-5 border-b border-[#E3DDD4] dark:border-[#383531] bg-[#F9F7F4] dark:bg-[#201F1E] flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-[#FFCF68] text-[#201F1E] flex items-center justify-center font-bold">
+                    <i data-lucide="book-open" class="w-5 h-5" aria-hidden="true"></i>
+                </div>
+                <div>
+                    <h2 id="tocDialogTitle" class="font-extrabold text-sm sm:text-base text-[#201F1E] dark:text-white">فهرست جامع بوت‌کمپ و گام‌های آموزشی</h2>
+                    <p class="text-[11px] text-[#8C847B]">روی هر گام کلیک کنید تا مستقیماً به همان صفحه منتقل شوید</p>
+                </div>
+            </div>
+
+            <form method="dialog">
+                <button type="submit" class="p-2 rounded-full bg-white dark:bg-[#2D2B28] hover:bg-[#FEECEF] text-[#201F1E] dark:text-white border border-[#E3DDD4] dark:border-[#383531] transition cursor-pointer" aria-label="بستن فهرست">
+                    <i data-lucide="x" class="w-4 h-4" aria-hidden="true"></i>
+                </button>
+            </form>
+        </div>
+
+        <!-- Search inside TOC -->
+        <div class="p-3 sm:px-5 bg-white dark:bg-[#242220] border-b border-[#E3DDD4] dark:border-[#383531]">
+            <search>
+                <div class="relative">
+                    <input type="search" id="tocSearchInput" placeholder="جستجوی سریع مبحث، دستور یا چالش صنعتی (مثلاً JOIN, Window, CTE, WHERE)..." class="w-full pr-9 pl-4 py-2 rounded-xl bg-[#F9F7F4] dark:bg-[#181716] border border-[#E3DDD4] dark:border-[#383531] text-xs sm:text-sm text-[#201F1E] dark:text-white focus:outline-none focus:border-[#FFCF68]">
+                    <i data-lucide="search" class="w-4 h-4 text-[#8C847B] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" aria-hidden="true"></i>
+                </div>
+            </search>
+        </div>
+
+        <!-- Scrollable TOC List -->
+        <div id="tocModalBody" class="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
+            <!-- Dynamically populated by app.js -->
+        </div>
+    </dialog>
+
+    <!-- 4. Footer -->
+    <footer class="mt-8 border-t border-[#E3DDD4] dark:border-[#383531] bg-[#ECE7DF] dark:bg-[#181716] py-5 relative z-10">
+        <div class="max-w-6xl mx-auto px-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#7E776E] dark:text-[#B5AEA4]">
+            <div class="flex items-center gap-2">
+                <div class="w-5 h-5 rounded-full bg-[#FFCF68] text-[#201F1E] flex items-center justify-center font-bold text-[10px]">DA</div>
+                <span>سامانه آموزش گام‌به‌گام تحلیل داده (شخصی‌سازی‌شده بر اساس پوشه‌های آموزشی شما)</span>
+            </div>
+            <div class="flex items-center gap-3 font-medium">
+                <span>راهنما: با کلیدهای جهت‌نمای چپ و راست کیبورد نیز می‌توانید بین گام‌ها جابجا شوید</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Curriculum Data Scripts -->
+    <script src="assets/js/data/mod01_sql.js"></script>
+    <script src="assets/js/data/mod02_excel.js"></script>
+    <script src="assets/js/data/mod03_tableau.js"></script>
+    <script src="assets/js/data/mod04_powerbi.js"></script>
+    <script src="assets/js/data/mod05_python.js"></script>
+    <script src="assets/js/data/mod06_pandas.js"></script>
+    <script src="assets/js/data/mod07_portfolio.js"></script>
+    <script src="assets/js/data/mod08_resume.js"></script>
+    <script src="assets/js/data/mod09_interview.js"></script>
+    <script src="assets/js/data/mod10_azure.js"></script>
+    <script src="assets/js/data/mod11_aws.js"></script>
+    <script src="assets/js/data/mod12_databricks.js"></script>
+    <script src="assets/js/data/mod13_linkedin.js"></script>
+    <script src="assets/js/data/assessments_data.js"></script>
+    <script src="assets/js/data/roadmap_catalog.js"></script>
+    <!-- Main Application Controller -->
+    <script src="assets/js/app.js"></script>
+    <script src="assets/js/assessments_ui.js"></script>
+</body>
+</html>

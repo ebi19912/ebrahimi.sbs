@@ -23,7 +23,7 @@ import time
 from sqlalchemy import func, desc, distinct, or_
 
 # Import your database models
-from models import db, Admin, Project, ResumeItem, Skill, Profile, AISettings, DemoSite, PageVisit, BlogPost
+from models import db, Admin, Project, ResumeItem, Skill, Profile, AISettings, DemoSite, PageVisit, BlogPost, TutorialTopic, TutorialLesson
 
 # Import RAG utilities
 from rag_utils import initialize_vector_db, get_relevant_context
@@ -2412,7 +2412,8 @@ def delete_demo(id):
 
 DEMO_FAB_TEMPLATE = """
 <!-- BEGIN DEMO INJECTION -->
-<div style="position: fixed; bottom: 20px; left: 20px; z-index: 999999; font-family: sans-serif; background: rgba(0,0,0,0.8); color: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); max-width: 250px;">
+<div id="demo-fab-container" style="position: fixed; bottom: 20px; left: 20px; z-index: 999999; font-family: sans-serif; background: rgba(0,0,0,0.8); color: white; padding: 15px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); max-width: 250px;">
+    <button onclick="document.getElementById('demo-fab-container').style.display='none'" style="position: absolute; top: -10px; right: -10px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; line-height: 1; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">&times;</button>
     <h6 style="margin: 0 0 10px 0; font-weight: bold; color: #fff; font-size: 16px;">This is a Live Demo</h6>
     <p style="font-size: 12px; margin: 0 0 15px 0; line-height: 1.4; color: #ccc;">Fully customizable. Order a site like this:</p>
     <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -2518,7 +2519,10 @@ def blog_list():
 
 @app.route('/blog/<slug>')
 def blog_post(slug):
-    post = BlogPost.query.filter_by(slug=slug, is_published=True).first_or_404()
+    if current_user.is_authenticated:
+        post = BlogPost.query.filter_by(slug=slug).first_or_404()
+    else:
+        post = BlogPost.query.filter_by(slug=slug, is_published=True).first_or_404()
     profile = Profile.query.first()
     return render_template('blog_post.html', post=post, profile=profile)
 
@@ -2588,6 +2592,202 @@ def delete_blog_post(id):
     flash('Blog post deleted!', 'success')
     return redirect(url_for('admin_blog_list'))
 
+# --- Teaching & Tutorial Public Routes ---
+@app.route('/tutorials')
+def tutorials_list():
+    topics = TutorialTopic.query.filter_by(is_published=True).order_by(TutorialTopic.order.asc(), TutorialTopic.created_at.desc()).all()
+    profile = Profile.query.first()
+    return render_template('tutorials_list.html', topics=topics, profile=profile)
+
+@app.route('/tutorials/<topic_slug>')
+def tutorial_topic_detail(topic_slug):
+    if current_user.is_authenticated:
+        topic = TutorialTopic.query.filter_by(slug=topic_slug).first_or_404()
+        lessons = TutorialLesson.query.filter_by(topic_id=topic.id).order_by(TutorialLesson.order.asc(), TutorialLesson.id.asc()).all()
+    else:
+        topic = TutorialTopic.query.filter_by(slug=topic_slug, is_published=True).first_or_404()
+        lessons = TutorialLesson.query.filter_by(topic_id=topic.id, is_published=True).order_by(TutorialLesson.order.asc(), TutorialLesson.id.asc()).all()
+        
+    profile = Profile.query.first()
+    return render_template('tutorial_topic_detail.html', topic=topic, lessons=lessons, profile=profile)
+
+@app.route('/tutorials/<topic_slug>/<lesson_slug>')
+def tutorial_lesson_view(topic_slug, lesson_slug):
+    if current_user.is_authenticated:
+        topic = TutorialTopic.query.filter_by(slug=topic_slug).first_or_404()
+        lessons = TutorialLesson.query.filter_by(topic_id=topic.id).order_by(TutorialLesson.order.asc(), TutorialLesson.id.asc()).all()
+        lesson = TutorialLesson.query.filter_by(topic_id=topic.id, slug=lesson_slug).first_or_404()
+    else:
+        topic = TutorialTopic.query.filter_by(slug=topic_slug, is_published=True).first_or_404()
+        lessons = TutorialLesson.query.filter_by(topic_id=topic.id, is_published=True).order_by(TutorialLesson.order.asc(), TutorialLesson.id.asc()).all()
+        lesson = TutorialLesson.query.filter_by(topic_id=topic.id, slug=lesson_slug, is_published=True).first_or_404()
+
+    prev_lesson = None
+    next_lesson = None
+    for i, l in enumerate(lessons):
+        if l.id == lesson.id:
+            if i > 0:
+                prev_lesson = lessons[i - 1]
+            if i < len(lessons) - 1:
+                next_lesson = lessons[i + 1]
+            break
+
+    profile = Profile.query.first()
+    return render_template('tutorial_lesson_view.html', topic=topic, lesson=lesson, lessons=lessons, prev_lesson=prev_lesson, next_lesson=next_lesson, profile=profile)
+
+# --- Teaching & Tutorial Admin Routes ---
+@app.route('/admin/tutorials')
+@login_required
+def admin_tutorial_topics():
+    topics = TutorialTopic.query.order_by(TutorialTopic.order.asc(), TutorialTopic.created_at.desc()).all()
+    return render_template('admin_tutorial_topics.html', topics=topics)
+
+@app.route('/admin/tutorials/topic/new', methods=['GET', 'POST'])
+@login_required
+def new_tutorial_topic():
+    if request.method == 'POST':
+        title = request.form.get('title')
+        slug = request.form.get('slug')
+        description = request.form.get('description')
+        icon = request.form.get('icon', 'bi-journal-code')
+        order = int(request.form.get('order', 0) or 0)
+        is_published = 'is_published' in request.form
+
+        topic = TutorialTopic(
+            title=title,
+            slug=slug,
+            description=description,
+            icon=icon,
+            order=order,
+            is_published=is_published
+        )
+        if 'cover_image' in request.files:
+            file = request.files['cover_image']
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                topic.cover_image = filename
+
+        db.session.add(topic)
+        db.session.commit()
+        flash('Course/Topic created successfully!', 'success')
+        return redirect(url_for('admin_tutorial_topics'))
+    return render_template('admin_edit_tutorial_topic.html', topic=None)
+
+@app.route('/admin/tutorials/topic/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_tutorial_topic(id):
+    topic = TutorialTopic.query.get_or_404(id)
+    if request.method == 'POST':
+        topic.title = request.form.get('title')
+        topic.slug = request.form.get('slug')
+        topic.description = request.form.get('description')
+        topic.icon = request.form.get('icon', 'bi-journal-code')
+        topic.order = int(request.form.get('order', 0) or 0)
+        topic.is_published = 'is_published' in request.form
+
+        if 'cover_image' in request.files:
+            file = request.files['cover_image']
+            if file and file.filename != '':
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                topic.cover_image = filename
+
+        db.session.commit()
+        flash('Course/Topic updated successfully!', 'success')
+        return redirect(url_for('admin_tutorial_topics'))
+    return render_template('admin_edit_tutorial_topic.html', topic=topic)
+
+@app.route('/admin/tutorials/topic/delete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def delete_tutorial_topic(id):
+    topic = TutorialTopic.query.get_or_404(id)
+    db.session.delete(topic)
+    db.session.commit()
+    flash('Topic and its lessons deleted!', 'success')
+    return redirect(url_for('admin_tutorial_topics'))
+
+@app.route('/admin/tutorials/topic/<int:topic_id>/lessons')
+@login_required
+def admin_tutorial_lessons(topic_id):
+    topic = TutorialTopic.query.get_or_404(topic_id)
+    lessons = TutorialLesson.query.filter_by(topic_id=topic.id).order_by(TutorialLesson.order.asc(), TutorialLesson.id.asc()).all()
+    return render_template('admin_tutorial_lessons.html', topic=topic, lessons=lessons)
+
+@app.route('/admin/tutorials/topic/<int:topic_id>/lesson/new', methods=['GET', 'POST'])
+@login_required
+def new_tutorial_lesson(topic_id):
+    topic = TutorialTopic.query.get_or_404(topic_id)
+    if request.method == 'POST':
+        title = request.form.get('title')
+        slug = request.form.get('slug')
+        summary = request.form.get('summary')
+        content = request.form.get('content')
+        order = int(request.form.get('order', 0) or 0)
+        estimated_read_time = request.form.get('estimated_read_time', '5 min')
+        is_published = 'is_published' in request.form
+
+        lesson = TutorialLesson(
+            topic_id=topic.id,
+            title=title,
+            slug=slug,
+            summary=summary,
+            content=content,
+            order=order,
+            estimated_read_time=estimated_read_time,
+            is_published=is_published
+        )
+        db.session.add(lesson)
+        db.session.commit()
+        flash('Lesson created successfully!', 'success')
+        return redirect(url_for('admin_tutorial_lessons', topic_id=topic.id))
+    max_order = db.session.query(func.max(TutorialLesson.order)).filter_by(topic_id=topic.id).scalar() or 0
+    return render_template('admin_edit_tutorial_lesson.html', topic=topic, lesson=None, default_order=max_order + 1)
+
+@app.route('/admin/tutorials/lesson/edit/<int:id>', methods=['GET', 'POST'])
+@login_required
+def edit_tutorial_lesson(id):
+    lesson = TutorialLesson.query.get_or_404(id)
+    topic = lesson.topic
+    if request.method == 'POST':
+        lesson.title = request.form.get('title')
+        lesson.slug = request.form.get('slug')
+        lesson.summary = request.form.get('summary')
+        lesson.content = request.form.get('content')
+        lesson.order = int(request.form.get('order', 0) or 0)
+        lesson.estimated_read_time = request.form.get('estimated_read_time', '5 min')
+        lesson.is_published = 'is_published' in request.form
+
+        db.session.commit()
+        flash('Lesson updated successfully!', 'success')
+        return redirect(url_for('admin_tutorial_lessons', topic_id=topic.id))
+    return render_template('admin_edit_tutorial_lesson.html', topic=topic, lesson=lesson, default_order=lesson.order)
+
+@app.route('/admin/tutorials/lesson/delete/<int:id>', methods=['GET', 'POST'])
+@login_required
+def delete_tutorial_lesson(id):
+    lesson = TutorialLesson.query.get_or_404(id)
+    topic_id = lesson.topic_id
+    db.session.delete(lesson)
+    db.session.commit()
+    flash('Lesson deleted successfully!', 'success')
+    return redirect(url_for('admin_tutorial_lessons', topic_id=topic_id))
+
+@app.route('/admin/tutorials/reorder-lessons', methods=['POST'])
+@login_required
+def reorder_tutorial_lessons():
+    data = request.get_json()
+    if not data or 'lesson_ids' not in data:
+        return jsonify({'success': False, 'message': 'Invalid data'}), 400
+    lesson_ids = data['lesson_ids']
+    for idx, lid in enumerate(lesson_ids):
+        lesson = TutorialLesson.query.get(lid)
+        if lesson:
+            lesson.order = idx + 1
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 # --- Sitemap Route ---
 @app.route('/sitemap.xml')
 def sitemap():
@@ -2611,6 +2811,15 @@ def sitemap():
     for demo in demos:
         url = url_for('serve_demo', slug=demo.slug, _external=True)
         pages.append([url, ten_days_ago])
+
+    # Tutorials
+    pages.append([url_for('tutorials_list', _external=True), ten_days_ago])
+    topics = TutorialTopic.query.filter_by(is_published=True).all()
+    for topic in topics:
+        pages.append([url_for('tutorial_topic_detail', topic_slug=topic.slug, _external=True), ten_days_ago])
+        for lesson in topic.lessons:
+            if lesson.is_published:
+                pages.append([url_for('tutorial_lesson_view', topic_slug=topic.slug, lesson_slug=lesson.slug, _external=True), lesson.created_at.date().isoformat()])
         
     sitemap_xml = render_template('sitemap.xml', pages=pages)
     response = make_response(sitemap_xml)

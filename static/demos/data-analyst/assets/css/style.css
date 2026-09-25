@@ -1,0 +1,494 @@
+@import url('https://fonts.googleapis.com/css2?family=Cabin:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500;600;700&family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+    /* Cabin / Crypto-Predictor Warm Editorial Palette */
+    --cabin-taupe: #B5A18B;
+    --cabin-taupe-light: #F4EFEA;
+    --cabin-yellow: #FFCF68;
+    --cabin-yellow-light: #FFF8E7;
+    --cabin-cream: #EDE8E1;
+    --cabin-dark: #201F1E;
+
+    --bg-main: #ECE7DF;
+    --bg-surface: #FFFFFF;
+    --bg-surface-elevated: #F9F7F4;
+    --border-main: #E3DDD4;
+    --border-subtle: #EFECE6;
+    --text-primary: #201F1E;
+    --text-secondary: #5C564F;
+    --text-muted: #8C847B;
+
+    /* Semantic Status Accents */
+    --accent-gold: #FFCF68;
+    --accent-emerald: #10B981;
+    --accent-emerald-light: #EBF7EE;
+    --accent-rose: #F43F5E;
+    --accent-rose-light: #FEECEF;
+    --accent-taupe: #B5A18B;
+
+    --card-shadow: 0 2px 10px -2px rgba(32, 31, 30, 0.04), 0 1px 3px -1px rgba(32, 31, 30, 0.03);
+    --card-shadow-hover: 0 12px 28px -6px rgba(32, 31, 30, 0.08), 0 4px 10px -2px rgba(32, 31, 30, 0.04);
+}
+
+.dark {
+    --cabin-taupe: #B5A18B;
+    --cabin-taupe-light: rgba(181, 161, 139, 0.15);
+    --cabin-yellow: #FFCF68;
+    --cabin-yellow-light: rgba(255, 207, 104, 0.12);
+    --cabin-cream: #201F1E;
+    --cabin-dark: #FFFFFF;
+
+    --bg-main: #181716;
+    --bg-surface: #242220;
+    --bg-surface-elevated: #2D2B28;
+    --border-main: #383531;
+    --border-subtle: #2C2A27;
+    --text-primary: #F5F2EB;
+    --text-secondary: #C4BDB3;
+    --text-muted: #8E877E;
+
+    --accent-gold: #FFCF68;
+    --accent-emerald: #34D399;
+    --accent-emerald-light: rgba(52, 211, 153, 0.12);
+    --accent-rose: #FB7185;
+    --accent-rose-light: rgba(251, 113, 133, 0.12);
+    --accent-taupe: #B5A18B;
+
+    --card-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -2px rgba(0, 0, 0, 0.3);
+    --card-shadow-hover: 0 16px 32px -4px rgba(0, 0, 0, 0.6), 0 6px 12px -2px rgba(0, 0, 0, 0.4);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    font-family: 'Vazirmatn', 'Cabin', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.25s ease, color 0.25s ease;
+    line-height: 1.8;
+}
+
+.font-mono,
+code,
+pre {
+    font-family: 'JetBrains Mono', 'Vazirmatn', monospace !important;
+}
+
+/* Organic Rounded Cards (Cabin & Crypto-Predictor style) */
+.crypto-card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-main);
+    box-shadow: var(--card-shadow);
+    border-radius: 1.25rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.crypto-card-interactive:hover {
+    box-shadow: var(--card-shadow-hover);
+    border-color: var(--cabin-taupe);
+}
+
+.dark .crypto-card-interactive:hover {
+    border-color: rgba(255, 207, 104, 0.4);
+}
+
+/* Featured Yellow Card */
+.card-featured-yellow {
+    background-color: #FFCF68 !important;
+    color: #201F1E !important;
+    border: 1px solid #F5C252 !important;
+    box-shadow: 0 8px 20px -4px rgba(255, 207, 104, 0.35) !important;
+}
+
+/* Ambient Golden Glow Orbs */
+.bg-orb-1 {
+    position: fixed;
+    bottom: -15%;
+    left: -10%;
+    width: 55vw;
+    height: 55vw;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 207, 104, 0.16) 0%, rgba(181, 161, 139, 0.09) 45%, rgba(236, 231, 223, 0) 70%);
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.bg-orb-2 {
+    position: fixed;
+    top: -15%;
+    right: -10%;
+    width: 45vw;
+    height: 45vw;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(181, 161, 139, 0.14) 0%, rgba(255, 207, 104, 0.08) 45%, rgba(236, 231, 223, 0) 70%);
+    filter: blur(90px);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.dark .bg-orb-1 {
+    background: radial-gradient(circle, rgba(255, 207, 104, 0.07) 0%, rgba(181, 161, 139, 0.04) 45%, rgba(0, 0, 0, 0) 70%);
+}
+
+.dark .bg-orb-2 {
+    background: radial-gradient(circle, rgba(181, 161, 139, 0.06) 0%, rgba(255, 207, 104, 0.04) 45%, rgba(0, 0, 0, 0) 70%);
+}
+
+/* Module Pill Buttons */
+.module-pill-btn {
+    border-radius: 9999px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    transition: all 0.2s ease;
+    color: var(--text-secondary);
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-main);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    cursor: pointer;
+}
+
+.module-pill-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--cabin-taupe);
+    transform: translateY(-1px);
+}
+
+.module-pill-btn.active {
+    background-color: #201F1E !important;
+    color: #FFFFFF !important;
+    border-color: #201F1E !important;
+    box-shadow: 0 4px 12px -2px rgba(32, 31, 30, 0.25);
+}
+
+.dark .module-pill-btn.active {
+    background-color: #FFCF68 !important;
+    color: #201F1E !important;
+    border-color: #FFCF68 !important;
+    box-shadow: 0 4px 12px -2px rgba(255, 207, 104, 0.3);
+}
+
+/* Step Dots in Step Bar */
+.step-dot-btn {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-main);
+    background-color: var(--bg-surface-elevated);
+    color: var(--text-secondary);
+    transition: all 0.18s ease;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.step-dot-btn:hover {
+    border-color: var(--cabin-taupe);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.step-dot-btn.active {
+    background-color: #FFCF68 !important;
+    color: #201F1E !important;
+    border-color: #E6B44C !important;
+    box-shadow: 0 3px 10px -1px rgba(255, 207, 104, 0.45);
+    transform: scale(1.06);
+}
+
+.step-dot-btn.completed:not(.active) {
+    background-color: var(--accent-emerald-light);
+    color: #15803D;
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+.dark .step-dot-btn.completed:not(.active) {
+    color: #34D399;
+}
+
+/* Lesson Prose Formatting */
+.lesson-prose {
+    color: var(--text-primary);
+    font-size: 0.975rem;
+    line-height: 1.95;
+}
+
+.lesson-prose h2 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-top: 1.75rem;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border-main);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lesson-prose h2::before {
+    content: "";
+    display: inline-block;
+    width: 0.45rem;
+    height: 1.25rem;
+    border-radius: 999px;
+    background-color: #FFCF68;
+    flex-shrink: 0;
+}
+
+.lesson-prose h3 {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-top: 1.35rem;
+    margin-bottom: 0.6rem;
+}
+
+.lesson-prose h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-top: 1.1rem;
+    margin-bottom: 0.45rem;
+}
+
+.lesson-prose p {
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+}
+
+.lesson-prose ul,
+.lesson-prose ol {
+    margin-bottom: 1.15rem;
+    padding-right: 1.4rem;
+    color: var(--text-secondary);
+}
+
+.lesson-prose ul {
+    list-style-type: disc;
+}
+
+.lesson-prose ol {
+    list-style-type: decimal;
+}
+
+.lesson-prose li {
+    margin-bottom: 0.45rem;
+}
+
+.lesson-prose strong,
+.lesson-prose b {
+    color: var(--text-primary);
+    font-weight: 800;
+}
+
+/* Inline Code */
+.lesson-prose :not(pre) > code {
+    direction: ltr;
+    unicode-bidi: embed;
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    margin: 0 0.15rem;
+    font-size: 0.825rem;
+    font-weight: 600;
+    border-radius: 0.45rem;
+    background-color: var(--cabin-taupe-light);
+    color: #201F1E;
+    border: 1px solid var(--border-main);
+}
+
+.dark .lesson-prose :not(pre) > code {
+    background-color: #2D2B28;
+    color: #FFCF68;
+    border-color: #383531;
+}
+
+/* Blockquotes & Callouts */
+.lesson-prose blockquote {
+    margin: 1.25rem 0;
+    padding: 1rem 1.25rem;
+    border-right: 4px solid #FFCF68;
+    background-color: var(--cabin-yellow-light);
+    border-radius: 0.85rem;
+    color: var(--text-primary);
+    font-size: 0.925rem;
+}
+
+/* Tables inside Lesson Prose */
+.lesson-prose table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 1.25rem 0;
+    font-size: 0.875rem;
+    border: 1px solid var(--border-main);
+    border-radius: 0.85rem;
+    overflow: hidden;
+}
+
+.lesson-prose th {
+    background-color: var(--bg-surface-elevated);
+    color: var(--text-primary);
+    font-weight: 800;
+    text-align: right;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-main);
+}
+
+.lesson-prose td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    vertical-align: top;
+}
+
+.lesson-prose tr:last-child td {
+    border-bottom: none;
+}
+
+.lesson-prose tr:hover td {
+    background-color: var(--cabin-taupe-light);
+}
+
+/* Code Block Container (LTR Terminal Style) */
+.code-block-wrapper {
+    direction: ltr;
+    text-align: left;
+    margin: 1.15rem 0;
+    border-radius: 1rem;
+    overflow: hidden;
+    background-color: #181716;
+    border: 1px solid #383531;
+    box-shadow: 0 6px 18px -4px rgba(0, 0, 0, 0.25);
+}
+
+.code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.55rem 1rem;
+    background-color: #242220;
+    border-bottom: 1px solid #383531;
+    color: #B5AEA4;
+    font-size: 0.75rem;
+}
+
+.code-block-pre {
+    margin: 0 !important;
+    padding: 1rem 1.2rem !important;
+    overflow-x: auto;
+    font-size: 0.84rem;
+    line-height: 1.7;
+    color: #F5F2EB;
+    background-color: #181716 !important;
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+.code-block-pre:focus-visible {
+    outline: 2px solid #FFCF68;
+    outline-offset: -2px;
+}
+
+/* Native Details / Summary Disclosure Styling */
+details.exercise-disclosure {
+    border: 1px solid var(--border-main);
+    border-radius: 0.9rem;
+    background-color: var(--bg-surface-elevated);
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+details.exercise-disclosure[open] {
+    border-color: var(--cabin-taupe);
+}
+
+details.exercise-disclosure > summary {
+    padding: 0.8rem 1.1rem;
+    font-weight: 800;
+    font-size: 0.875rem;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+}
+
+details.exercise-disclosure > summary::-webkit-details-marker {
+    display: none;
+}
+
+details.exercise-disclosure > summary:hover {
+    background-color: var(--cabin-taupe-light);
+}
+
+/* Native Dialog (Table of Contents Modal) */
+dialog#tocDialog {
+    border: 1px solid var(--border-main);
+    border-radius: 1.5rem;
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+    width: min(94vw, 58rem);
+    max-height: 86vh;
+    padding: 0;
+    margin: auto;
+    overflow: hidden;
+}
+
+dialog#tocDialog[open] {
+    display: flex;
+    flex-direction: column;
+}
+
+dialog#tocDialog::backdrop {
+    background: rgba(24, 23, 22, 0.65);
+    backdrop-filter: blur(5px);
+}
+
+/* Toast Notification */
+#toastContainer {
+    position: fixed;
+    bottom: 1.25rem;
+    left: 1.25rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #D3CCC2;
+    border-radius: 9999px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #45403B;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #B5A18B;
+}
